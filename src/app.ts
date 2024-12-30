@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
+import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { ConnectToMongo } from "./config/db";
 import userRoutes from "./routes/userRoutes";
@@ -16,6 +17,8 @@ app.use(
     credentials: true, // Allow cookies
   })
 );
+
+app.use(cookieParser());
 app.use(bodyParser.json());
 
 ConnectToMongo();

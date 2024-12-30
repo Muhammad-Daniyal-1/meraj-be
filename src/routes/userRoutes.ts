@@ -5,10 +5,11 @@ import {
   login,
   logout,
 } from "../controllers/userController";
+import { authMiddleware } from "../middlewares/authMiddleware";
 
 const router = Router();
 
-router.get("/get-all", getUsers);
+router.get("/get-all", authMiddleware, getUsers);
 router.post("/create", createUser);
 router.post("/login", login);
 router.post("/logout", logout);

@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
+    console.log(req.query);
     const { page = 1, limit = 20, search = "" } = req.query;
 
     const pageNumber = parseInt(page as string, 10);
@@ -173,4 +174,33 @@ export const login = async (req: Request, res: Response) => {
 export const logout = async (req: Request, res: Response) => {
   res.clearCookie("token");
   res.status(200).json({ success: true, message: "Logout successful" });
+};
+
+export const updateUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, username, password, role, isActive, permissions } = req.body;
+
+    const user = await User.findByIdAndUpdate(id, {
+      name,
+      username,
+      password,
+      role,
+      isActive,
+      permissions,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update user",
+      error: error instanceof Error ? error.message : "Internal Server Error",
+    });
+  }
 };
