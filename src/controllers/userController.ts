@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request, Response, RequestHandler } from "express";
 import bcrypt from "bcrypt";
 import { User } from "../models/userModel";
 import { addUserSchema, loginSchema } from "./schema";
@@ -6,7 +6,6 @@ import jwt from "jsonwebtoken";
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
-    console.log(req.query);
     const { page = 1, limit = 20, search = "" } = req.query;
 
     const pageNumber = parseInt(page as string, 10);
@@ -46,6 +45,20 @@ export const getUsers = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch users",
+      error: error instanceof Error ? error.message : "Internal Server Error",
+    });
+  }
+};
+
+export const getUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id).select("-password");
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({
+      success: false,
       error: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
@@ -105,6 +118,78 @@ export const createUser = async (
     res.status(500).json({
       success: false,
       message: "Failed to create user",
+      error: error instanceof Error ? error.message : "Internal Server Error",
+    });
+  }
+};
+
+export const updateUser: RequestHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, username, password, role, isActive, permissions } = req.body;
+
+    // Initialize an update object
+    const updateData: Record<string, any> = {};
+
+    // Add fields to updateData only if they exist in the request body
+    if (name) updateData.name = name;
+    if (username) updateData.username = username;
+    if (role) updateData.role = role;
+    if (typeof isActive !== "undefined") updateData.isActive = isActive;
+    if (permissions) updateData.permissions = permissions;
+
+    // Hash the password if provided
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    // Update the user and exclude password from the response
+    const user = await User.findByIdAndUpdate(id, updateData, {
+      new: true,
+      fields: { password: 0 },
+    });
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update user",
+      error: error instanceof Error ? error.message : "Internal Server Error",
+    });
+  }
+};
+
+export const deleteUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByIdAndDelete(id);
+
+    if (!user) {
+      res.status(404).json({ success: false, message: "User not found" });
+      return;
+    }
+
+    res
+      .status(200)
+      .json({ success: true, message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete user",
       error: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
@@ -174,33 +259,4 @@ export const login = async (req: Request, res: Response) => {
 export const logout = async (req: Request, res: Response) => {
   res.clearCookie("token");
   res.status(200).json({ success: true, message: "Logout successful" });
-};
-
-export const updateUser = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { name, username, password, role, isActive, permissions } = req.body;
-
-    const user = await User.findByIdAndUpdate(id, {
-      name,
-      username,
-      password,
-      role,
-      isActive,
-      permissions,
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "User updated successfully",
-      user,
-    });
-  } catch (error) {
-    console.error("Error updating user:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to update user",
-      error: error instanceof Error ? error.message : "Internal Server Error",
-    });
-  }
 };
