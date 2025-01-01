@@ -4,6 +4,7 @@ import { createAgentSchema } from "./schema";
 
 export const getAgents = async (req: Request, res: Response) => {
   try {
+    console.log("getAgents", req.query);
     const { page = 1, limit = 20, search = "" } = req.query;
 
     const pageNumber = parseInt(page as string, 10);
@@ -88,7 +89,9 @@ export const createAgent = async (req: Request, res: Response) => {
       return;
     }
 
-    const newAgent = await Agents.create(value);
+    const userId = (req as any).userId;
+
+    const newAgent = await Agents.create({ ...value, userId });
     res.json({ success: true, agent: newAgent });
   } catch (error) {
     console.error("Error creating agent:", error);
@@ -102,21 +105,20 @@ export const createAgent = async (req: Request, res: Response) => {
 export const updateAgent = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { error, value } = createAgentSchema.validate(req.body, {
-      abortEarly: false,
-    });
 
-    if (error) {
-      res.status(400).json({ success: false, error: error.details });
-    }
-
-    const existingAgent = await Agents.findOne({ id: value.id });
-    if (existingAgent) {
-      res.status(400).json({ success: false, error: "Agent already exists" });
+    const existingAgent = await Agents.findOne({ _id: id });
+    if (!existingAgent) {
+      res.status(404).json({ success: false, error: "Agent not found" });
       return;
     }
 
-    const agent = await Agents.findByIdAndUpdate(id, value, { new: true });
+    const userId = (req as any).userId;
+
+    const agent = await Agents.findByIdAndUpdate(
+      id,
+      { ...req.body, userId },
+      { new: true }
+    );
     res.json({ success: true, agent });
   } catch (error) {
     console.error("Error updating agent:", error);
@@ -137,9 +139,10 @@ export const deleteAgent = async (req: Request, res: Response) => {
       return;
     }
 
-    res
-      .status(200)
-      .json({ success: true, message: "Agent deleted successfully" });
+    res.status(200).json({
+      success: true,
+      message: "Agent deleted successfully",
+    });
   } catch (error) {
     console.error("Error deleting agent:", error);
     res.status(500).json({

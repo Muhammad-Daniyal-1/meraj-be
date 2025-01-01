@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface Agents extends Document {
+  userId: string;
   id: string;
   name: string;
   email: string;
@@ -10,6 +11,11 @@ export interface Agents extends Document {
 
 const agentsSchema: Schema = new Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     id: { type: String, required: true },
     name: { type: String, required: true },
     email: { type: String, required: true },

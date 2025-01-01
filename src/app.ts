@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { ConnectToMongo } from "./config/db";
 import userRoutes from "./routes/userRoutes";
+import agentRoutes from "./routes/agentsRoutes";
 
 dotenv.config();
 
@@ -30,5 +31,6 @@ app.get("/", (req: Request, res: Response) => {
 
 // API Routes
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/agents", agentRoutes);
 
 export default app;
