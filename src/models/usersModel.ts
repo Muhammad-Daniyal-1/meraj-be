@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export interface IUser extends Document {
+export interface User extends Document {
   name: string;
   username: string;
   password: string;
@@ -19,7 +19,7 @@ const userSchema: Schema = new Schema(
       enum: ["Admin", "User"],
       default: "User",
     },
-    isActive: {
+    status: {
       type: Boolean,
       required: true,
       default: true,
@@ -33,4 +33,4 @@ const userSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-export const User = mongoose.model<IUser>("User", userSchema);
+export const User = mongoose.model<User>("User", userSchema);

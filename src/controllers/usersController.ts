@@ -1,6 +1,6 @@
 import { Request, Response, RequestHandler } from "express";
 import bcrypt from "bcrypt";
-import { User } from "../models/userModel";
+import { User } from "../models/usersModel";
 import { addUserSchema, loginSchema } from "./schema";
 import jwt from "jsonwebtoken";
 
@@ -23,6 +23,7 @@ export const getUsers = async (req: Request, res: Response) => {
 
     // Fetching users with pagination and search query
     const users = await User.find(query)
+      .sort({ createdAt: -1 })
       .select("-password")
       .skip((pageNumber - 1) * limitNumber)
       .limit(limitNumber);
@@ -50,7 +51,7 @@ export const getUsers = async (req: Request, res: Response) => {
   }
 };
 
-export const getUser = async (req: Request, res: Response) => {
+export const getUserById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id).select("-password");
@@ -82,7 +83,7 @@ export const createUser = async (
       return;
     }
 
-    const { name, username, password, role, isActive, permissions } = value;
+    const { name, username, password, role, status, permissions } = value;
 
     // Check if the user already exists
     const existingUser = await User.findOne({ username });
@@ -100,7 +101,7 @@ export const createUser = async (
       username,
       password: hashedPassword,
       role,
-      isActive,
+      status,
       permissions,
     });
 
@@ -126,7 +127,7 @@ export const createUser = async (
 export const updateUser: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, username, password, role, isActive, permissions } = req.body;
+    const { name, username, password, role, status, permissions } = req.body;
 
     // Initialize an update object
     const updateData: Record<string, any> = {};
@@ -135,7 +136,7 @@ export const updateUser: RequestHandler = async (req, res) => {
     if (name) updateData.name = name;
     if (username) updateData.username = username;
     if (role) updateData.role = role;
-    if (typeof isActive !== "undefined") updateData.isActive = isActive;
+    if (typeof status !== "undefined") updateData.status = status;
     if (permissions) updateData.permissions = permissions;
 
     // Hash the password if provided
