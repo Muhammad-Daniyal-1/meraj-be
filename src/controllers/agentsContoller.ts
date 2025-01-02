@@ -4,7 +4,6 @@ import { createAgentSchema } from "./schema";
 
 export const getAgents = async (req: Request, res: Response) => {
   try {
-    console.log("getAgents", req.query);
     const { page = 1, limit = 20, search = "" } = req.query;
 
     const pageNumber = parseInt(page as string, 10);

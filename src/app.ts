@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import { ConnectToMongo } from "./config/db";
 import userRoutes from "./routes/userRoutes";
 import agentRoutes from "./routes/agentsRoutes";
+import providerRoutes from "./routes/providerRoutes";
 
 dotenv.config();
 
@@ -32,5 +33,6 @@ app.get("/", (req: Request, res: Response) => {
 // API Routes
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/agents", agentRoutes);
+app.use("/api/v1/providers", providerRoutes);
 
 export default app;
