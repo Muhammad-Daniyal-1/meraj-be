@@ -5,7 +5,7 @@ import {
   getProviders,
   getProviderById,
   updateProvider,
-} from "../controllers/providersContoller";
+} from "../controllers/providersController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 
 const router = Router();

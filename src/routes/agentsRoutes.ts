@@ -5,7 +5,7 @@ import {
   getAgents,
   getAgentById,
   updateAgent,
-} from "../controllers/agentsContoller";
+} from "../controllers/agentsController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 
 const router = Router();
