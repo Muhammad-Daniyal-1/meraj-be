@@ -8,6 +8,7 @@ import userRoutes from "./routes/userRoutes";
 import agentRoutes from "./routes/agentsRoutes";
 import providerRoutes from "./routes/providerRoutes";
 import ticketsRoutes from "./routes/ticketsRoutes";
+import ledgerRoutes from "./routes/ledgerRoutes";
 
 dotenv.config();
 
@@ -36,5 +37,6 @@ app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/agents", agentRoutes);
 app.use("/api/v1/providers", providerRoutes);
 app.use("/api/v1/tickets", ticketsRoutes);
+app.use("/api/v1/ledger", ledgerRoutes);
 
 export default app;
