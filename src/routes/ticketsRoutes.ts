@@ -6,13 +6,14 @@ import {
   updateTicket,
   deleteTicket,
 } from "../controllers/ticketsController";
+import { authMiddleware } from "../middlewares/authMiddleware";
 
 const router = Router();
 
-router.get("/get-all", getTickets);
-router.get("/get-ticket/:id", getTicketById);
-router.post("/create", createTicket);
-router.put("/update/:id", updateTicket);
-router.delete("/delete/:id", deleteTicket);
+router.get("/get-all", authMiddleware, getTickets);
+router.get("/get-ticket/:id", authMiddleware, getTicketById);
+router.post("/create", authMiddleware, createTicket);
+router.patch("/update/:id", authMiddleware, updateTicket);
+router.delete("/delete/:id", authMiddleware, deleteTicket); 
 
 export default router;

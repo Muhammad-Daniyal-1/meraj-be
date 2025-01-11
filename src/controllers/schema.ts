@@ -31,10 +31,6 @@ export const createProviderSchema = Joi.object({
 });
 
 export const createTicketSchema = Joi.object({
-  userId: Joi.string().required().messages({
-    "string.empty": "User ID is required.",
-    "any.required": "User ID is required.",
-  }),
   ticketNumber: Joi.string().required().messages({
     "string.empty": "Ticket Number is required.",
     "any.required": "Ticket Number is required.",
@@ -43,7 +39,7 @@ export const createTicketSchema = Joi.object({
     "string.empty": "Client Name is required.",
     "any.required": "Client Name is required.",
   }),
-  providerId: Joi.string().required().messages({
+  provider: Joi.string().required().messages({
     "string.empty": "Provider ID is required.",
     "any.required": "Provider ID is required.",
   }),
@@ -92,10 +88,7 @@ export const createTicketSchema = Joi.object({
     "number.base": "Profit must be a number.",
     "any.required": "Profit is required.",
   }),
-  reference: Joi.string().required().messages({
-    "string.empty": "Reference is required.",
-    "any.required": "Reference is required.",
-  }),
+  reference: Joi.string().optional().allow(""),
   clientPaymentMethod: Joi.string().required().messages({
     "string.empty": "Client Payment Method is required.",
     "any.required": "Client Payment Method is required.",

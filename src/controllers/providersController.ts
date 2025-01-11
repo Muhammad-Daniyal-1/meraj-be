@@ -90,9 +90,9 @@ export const createProvider = async (req: Request, res: Response) => {
       return;
     }
 
-    const userId = (req as any).userId;
+    const user = (req as any).userId;
 
-    const newProvider = await Providers.create({ ...value, userId });
+    const newProvider = await Providers.create({ ...value, user });
     res.json({ success: true, provider: newProvider });
   } catch (error) {
     console.error("Error creating provider:", error);
@@ -113,11 +113,11 @@ export const updateProvider = async (req: Request, res: Response) => {
       return;
     }
 
-    const userId = (req as any).userId;
+    const user = (req as any).user;
 
     const provider = await Providers.findByIdAndUpdate(
       id,
-      { ...req.body, userId },
+      { ...req.body, user },
       { new: true }
     );
     res.json({ success: true, provider });

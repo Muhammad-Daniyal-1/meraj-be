@@ -25,14 +25,14 @@ export interface Ticket extends Document {
 
 const ticketSchema: Schema = new Schema(
   {
-    userId: {
+    user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
     ticketNumber: { type: String, required: true },
     clientName: { type: String, required: true },
-    providerId: {
+    provider: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Providers",
       required: true,
@@ -52,7 +52,7 @@ const ticketSchema: Schema = new Schema(
     providerCost: { type: Number, required: true, min: 0 },
     consumerCost: { type: Number, required: true, min: 0 },
     profit: { type: Number, required: true },
-    reference: { type: String, required: true },
+    reference: { type: String },
     clientPaymentMethod: { type: String, required: true },
     paymentToProvider: { type: String, required: true },
     segment: { type: String, required: true },

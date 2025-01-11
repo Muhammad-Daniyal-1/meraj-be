@@ -11,7 +11,7 @@ export interface Agents extends Document {
 
 const agentsSchema: Schema = new Schema(
   {
-    userId: {
+    user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,

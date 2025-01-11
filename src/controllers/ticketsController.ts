@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { Tickets } from "../models/ticketsModel";
 import { createTicketSchema } from "./schema";
+import { createTicketLedgerEntry } from "./ledgerController";
+import mongoose from "mongoose";
 
 export const getTickets = async (req: Request, res: Response) => {
   try {
@@ -9,27 +11,120 @@ export const getTickets = async (req: Request, res: Response) => {
     const pageNumber = parseInt(page as string, 10);
     const limitNumber = parseInt(limit as string, 10);
 
-    // Query for search functionality
-    const query = search
-      ? {
-          $or: [
-            { ticketNumber: { $regex: search, $options: "i" } },
-            { clientName: { $regex: search, $options: "i" } },
-            { operationType: { $regex: search, $options: "i" } },
-            { departure: { $regex: search, $options: "i" } },
-            { destination: { $regex: search, $options: "i" } },
-          ],
+    const pipeline = [];
+
+    // Add lookups for provider and agent
+    pipeline.push(
+      {
+        $lookup: {
+          from: "providers",
+          localField: "provider",
+          foreignField: "_id",
+          as: "providerData"
         }
-      : {};
+      },
+      {
+        $lookup: {
+          from: "agents",
+          localField: "agent",
+          foreignField: "_id",
+          as: "agentData"
+        }
+      },
+      {
+        $addFields: {
+          provider: {
+            $cond: {
+              if: { $gt: [{ $size: "$providerData" }, 0] },
+              then: {
+                _id: { $arrayElemAt: ["$providerData._id", 0] },
+                name: { $arrayElemAt: ["$providerData.name", 0] }
+              },
+              else: null
+            }
+          },
+          agent: {
+            $cond: {
+              if: { $gt: [{ $size: "$agentData" }, 0] },
+              then: {
+                _id: { $arrayElemAt: ["$agentData._id", 0] },
+                name: { $arrayElemAt: ["$agentData.name", 0] }
+              },
+              else: null
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          providerData: 0,
+          agentData: 0
+        }
+      }
+    );
 
-    // Fetching tickets with pagination and search query
-    const tickets = await Tickets.find(query)
-      .sort({ createdAt: -1 })
-      .skip((pageNumber - 1) * limitNumber)
-      .limit(limitNumber);
+    // Add search conditions if search parameter exists
+    if (search) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { operationType: { $regex: search, $options: "i" } },
+            { pnr: { $regex: search, $options: "i" } },
+            { ticketNumber: { $regex: search, $options: "i" } },
+            { issueDate: { $regex: search, $options: "i" } },
+            { clientName: { $regex: search, $options: "i" } },
+            { departureDate: { $regex: search, $options: "i" } },
+            { "provider.name": { $regex: search, $options: "i" } },
+            { "agent.name": { $regex: search, $options: "i" } }
+          ]
+        }
+      });
+    }
 
-    // Total count for pagination
-    const totalTickets = await Tickets.countDocuments(query);
+    // Add count facet for pagination
+    pipeline.push(
+      {
+        $facet: {
+          metadata: [{ $count: "total" }],
+          data: [
+            { $sort: { createdAt: -1 } },
+            { $skip: (pageNumber - 1) * limitNumber },
+            { $limit: limitNumber },
+            {
+              $project: {
+                _id: 1,
+                ticketNumber: 1,
+                clientName: 1,
+                operationType: 1,
+                issueDate: 1,
+                departureDate: 1,
+                returnDate: 1,
+                departure: 1,
+                destination: 1,
+                pnr: 1,
+                providerCost: 1,
+                consumerCost: 1,
+                profit: 1,
+                reference: 1,
+                clientPaymentMethod: 1,
+                paymentToProvider: 1,
+                segment: 1,
+                furtherDescription: 1,
+                provider: 1,
+                agent: 1,
+                createdAt: 1,
+                updatedAt: 1
+              }
+            }
+          ]
+        }
+      }
+    );
+
+    const result = await Tickets.aggregate(pipeline as any);
+    
+    const tickets = result[0].data;
+    const totalTickets = result[0].metadata[0]?.total || 0;
 
     res.json({
       success: true,
@@ -54,7 +149,9 @@ export const getTickets = async (req: Request, res: Response) => {
 export const getTicketById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const ticket = await Tickets.findById(id);
+    const ticket = await Tickets.findById(id)
+      .populate('provider', 'name')
+      .populate('agent', 'name');
 
     if (!ticket) {
       res.status(404).json({ success: false, message: "Ticket not found" });
@@ -85,15 +182,37 @@ export const createTicket = async (req: Request, res: Response) => {
     const existingTicket = await Tickets.findOne({
       ticketNumber: value.ticketNumber,
     });
+    
     if (existingTicket) {
       res.status(400).json({ success: false, error: "Ticket already exists" });
       return;
     }
 
-    const userId = (req as any).userId;
+    const user = (req as any).userId;
 
-    const newTicket = await Tickets.create({ ...value, userId });
-    res.json({ success: true, ticket: newTicket });
+    const newTicket = await Tickets.create({ ...value, user });
+    const populatedTicket = await Tickets.findById(newTicket._id)
+      .populate('provider', 'name')
+      .populate('agent', 'name');
+
+    // Create ledger entry if there's an agent or if there's remaining payment
+    if (value.agent || value.consumerCost > 0) {
+      try {
+        await createTicketLedgerEntry(
+          value.agent || newTicket._id,
+          value.agent ? 'Agents' : 'Client',
+          // @ts-ignore
+          newTicket._id,
+          value.consumerCost,
+          value.ticketNumber
+        );
+      } catch (ledgerError) {
+        // If ledger creation fails, we should log it but not fail the ticket creation
+        console.error("Error creating ledger entry:", ledgerError);
+      }
+    }
+
+    res.json({ success: true, ticket: populatedTicket });
   } catch (error) {
     console.error("Error creating ticket:", error);
     res.status(500).json({
@@ -113,14 +232,19 @@ export const updateTicket = async (req: Request, res: Response) => {
       return;
     }
 
-    const userId = (req as any).userId;
+    const user = (req as any).userId;
 
-    const ticket = await Tickets.findByIdAndUpdate(
+    const updatedTicket = await Tickets.findByIdAndUpdate(
       id,
-      { ...req.body, userId },
+      { ...req.body, user },
       { new: true }
     );
-    res.json({ success: true, ticket });
+
+    const populatedTicket = await Tickets.findById(updatedTicket?._id)
+      .populate('provider', 'name')
+      .populate('agent', 'name');
+
+    res.json({ success: true, ticket: populatedTicket });
   } catch (error) {
     console.error("Error updating ticket:", error);
     res.status(500).json({

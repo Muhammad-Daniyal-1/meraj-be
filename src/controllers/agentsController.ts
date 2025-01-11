@@ -88,9 +88,9 @@ export const createAgent = async (req: Request, res: Response) => {
       return;
     }
 
-    const userId = (req as any).userId;
+    const user = (req as any).userId;
 
-    const newAgent = await Agents.create({ ...value, userId });
+    const newAgent = await Agents.create({ ...value, user });
     res.json({ success: true, agent: newAgent });
   } catch (error) {
     console.error("Error creating agent:", error);
@@ -111,11 +111,11 @@ export const updateAgent = async (req: Request, res: Response) => {
       return;
     }
 
-    const userId = (req as any).userId;
+    const user = (req as any).userId;
 
     const agent = await Agents.findByIdAndUpdate(
       id,
-      { ...req.body, userId },
+      { ...req.body, user },
       { new: true }
     );
     res.json({ success: true, agent });
