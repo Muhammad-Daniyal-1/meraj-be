@@ -22,11 +22,11 @@ const ledgerSchema: Schema = new Schema(
     entityType: {
       type: String,
       required: true,
-      enum: ['Agents', 'Client']
+      enum: ['Agents', 'Tickets']
     },
     ticketId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Ticket",
+      ref: "Tickets",
       required: false
     },
     transactionType: {

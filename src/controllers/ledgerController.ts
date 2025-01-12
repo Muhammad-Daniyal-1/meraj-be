@@ -40,7 +40,7 @@ export const createTicketLedgerEntry = async (
     // Get the current balance
     const lastEntry = await Ledger.findOne({ entityId })
       .sort({ createdAt: -1 });
-    
+
     const currentBalance = lastEntry ? lastEntry.balance : 0;
     const newBalance = currentBalance + amount;
 
@@ -79,7 +79,7 @@ export const recordPayment = async (req: Request<{}, {}, PaymentRequestBody>, re
     // Get current balance
     const lastEntry = await Ledger.findOne({ entityId })
       .sort({ createdAt: -1 });
-    
+
     const currentBalance = lastEntry ? lastEntry.balance : 0;
     const newBalance = currentBalance - amount;
 
@@ -126,38 +126,137 @@ export const recordPayment = async (req: Request<{}, {}, PaymentRequestBody>, re
   }
 };
 
-export const getLedger = async (req: Request<{}, {}, {}, LedgerQueryParams>, res: Response) => {
+export const getLedgerByEntity = async (req: Request, res: Response) => {
   try {
-    const { entityId, startDate, endDate } = req.query;
-    
+    // Extract query parameters and body
+    const { page = "1", limit = "20", search = "" } = req.query;
+    const { entityId } = req.body;
+
+    // Validate required fields
     if (!entityId) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
-        error: "entityId is required"
+        error: "entityId is required",
       });
+      return;
     }
 
-    const query: any = { 
-      entityId: new mongoose.Types.ObjectId(entityId) 
-    };
-    
-    if (startDate && endDate) {
-      query.date = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
-      };
-    }
+    // Convert page and limit to numbers
+    const pageNumber = parseInt(page as string, 10);
+    const limitNumber = parseInt(limit as string, 10);
 
-    const ledgerEntries = await Ledger.find(query)
-      .sort({ date: 1 })
-      .populate('ticketId');
+    // Build search query
+    const query = search
+      ? {
+        $or: [
+          { entityId: { $regex: search, $options: "i" } },
+          { entityType: { $regex: search, $options: "i" } },
+          { ticketId: { $regex: search, $options: "i" } },
+          { transactionType: { $regex: search, $options: "i" } },
+          { amount: { $regex: search, $options: "i" } },
+          { balance: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+          { date: { $regex: search, $options: "i" } },
+          { referenceNumber: { $regex: search, $options: "i" } },
+        ],
+      }
+      : {};
+
+    // Query the database
+    const ledgerEntries = await Ledger.find({ entityId, ...query })
+      .sort({ createdAt: -1 })
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber);
+
+
+    const totalLedgers = await Ledger.countDocuments({ entityId, ...query });
+
+    // Send the response
+    res.status(200).json({
+      success: true,
+      ledgerEntries,
+      pagination: {
+        currentPage: pageNumber,
+        totalPages: Math.ceil(totalLedgers / limitNumber),
+        totalItems: totalLedgers,
+        pageSize: limitNumber,
+      },
+    });
+  } catch (error) {
+    // Handle errors
+    console.error("Error getting ledger:", error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    });
+  }
+};
+
+export const getLedgers = async (req: Request, res: Response) => {
+  try {
+
+    const { page = 1, limit = 20, search = "" } = req.query;
+
+    const pageNumber = parseInt(page as string, 10);
+    const limitNumber = parseInt(limit as string, 10);
+
+    // Query for search functionality
+    const query = search
+      ? {
+        $or: [
+          { entityId: { $regex: search, $options: "i" } },
+          { entityType: { $regex: search, $options: "i" } },
+          { ticketId: { $regex: search, $options: "i" } },
+          { transactionType: { $regex: search, $options: "i" } },
+          { amount: { $regex: search, $options: "i" } },
+          { balance: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+          { date: { $regex: search, $options: "i" } },
+          { referenceNumber: { $regex: search, $options: "i" } },
+        ],
+      }
+      : {};
+
+    // Fetching ledgers with pagination and search query
+    const ledgers = await Ledger.find(query)
+      .sort({ createdAt: -1 })
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber)
+      .populate('ticketId', 'ticketNumber passengerName');
+
+    // Dynamically populate entityId based on entityType
+    const populatedLedgers = await Promise.all(
+      ledgers.map(async (ledger) => {
+        const ledgerObj = ledger.toObject();
+
+        if (ledger.entityType === 'Agents') {
+          const agent = await mongoose.model('Agents').findById(ledger.entityId).select('name');
+          ledgerObj.entityId = agent;
+        } else if (ledger.entityType === 'Tickets') {
+          console.log(ledger.entityId);
+          const ticket = await mongoose.model('Tickets').findById(ledger.entityId).select('passengerName ticketNumber');
+          ledgerObj.entityId = ticket;
+        }
+        return ledgerObj;
+      })
+    );
+
+
+    // Total count for pagination
+    const totalLedgers = await Ledger.countDocuments(query);
 
     res.status(200).json({
       success: true,
-      data: ledgerEntries
+      ledgers: populatedLedgers,
+      pagination: {
+        currentPage: pageNumber,
+        totalPages: Math.ceil(totalLedgers / limitNumber),
+        totalItems: totalLedgers,
+        pageSize: limitNumber,
+      },
     });
+
   } catch (error) {
-    console.error("Error getting ledger:", error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error occurred"
@@ -180,11 +279,11 @@ export const createManualLedgerEntry = async (req: Request<{}, {}, ManualLedgerE
     // Get the current balance
     const lastEntry = await Ledger.findOne({ entityId })
       .sort({ createdAt: -1 });
-    
+
     const currentBalance = lastEntry ? lastEntry.balance : 0;
     // If it's a credit entry, subtract from balance, if debit add to balance
-    const newBalance = transactionType === 'credit' 
-      ? currentBalance - amount 
+    const newBalance = transactionType === 'credit'
+      ? currentBalance - amount
       : currentBalance + amount;
 
     // Create new ledger entry

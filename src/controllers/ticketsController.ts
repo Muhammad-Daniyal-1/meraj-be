@@ -72,7 +72,7 @@ export const getTickets = async (req: Request, res: Response) => {
             { pnr: { $regex: search, $options: "i" } },
             { ticketNumber: { $regex: search, $options: "i" } },
             { issueDate: { $regex: search, $options: "i" } },
-            { clientName: { $regex: search, $options: "i" } },
+            { passengerName: { $regex: search, $options: "i" } },
             { departureDate: { $regex: search, $options: "i" } },
             { "provider.name": { $regex: search, $options: "i" } },
             { "agent.name": { $regex: search, $options: "i" } }
@@ -94,7 +94,7 @@ export const getTickets = async (req: Request, res: Response) => {
               $project: {
                 _id: 1,
                 ticketNumber: 1,
-                clientName: 1,
+                passengerName: 1,
                 operationType: 1,
                 issueDate: 1,
                 departureDate: 1,
@@ -122,7 +122,7 @@ export const getTickets = async (req: Request, res: Response) => {
     );
 
     const result = await Tickets.aggregate(pipeline as any);
-    
+
     const tickets = result[0].data;
     const totalTickets = result[0].metadata[0]?.total || 0;
 
@@ -182,7 +182,7 @@ export const createTicket = async (req: Request, res: Response) => {
     const existingTicket = await Tickets.findOne({
       ticketNumber: value.ticketNumber,
     });
-    
+
     if (existingTicket) {
       res.status(400).json({ success: false, error: "Ticket already exists" });
       return;

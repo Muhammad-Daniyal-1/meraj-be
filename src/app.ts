@@ -37,6 +37,6 @@ app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/agents", agentRoutes);
 app.use("/api/v1/providers", providerRoutes);
 app.use("/api/v1/tickets", ticketsRoutes);
-app.use("/api/v1/ledger", ledgerRoutes);
+app.use("/api/v1/ledgers", ledgerRoutes);
 
 export default app;

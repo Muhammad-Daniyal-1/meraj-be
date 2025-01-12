@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface Ticket extends Document {
   userId: string;
   ticketNumber: string;
-  clientName: string;
+  passengerName: string;
   providerId: string;
   agent: string;
   operationType: string;
@@ -31,7 +31,7 @@ const ticketSchema: Schema = new Schema(
       required: true,
     },
     ticketNumber: { type: String, required: true },
-    clientName: { type: String, required: true },
+    passengerName: { type: String, required: true },
     provider: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Providers",

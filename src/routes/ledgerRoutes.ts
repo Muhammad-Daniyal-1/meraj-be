@@ -1,8 +1,9 @@
 import express from "express";
-import { 
-  recordPayment, 
-  getLedger,
-  createManualLedgerEntry 
+import {
+  recordPayment,
+  getLedgerByEntity,
+  getLedgers,
+  createManualLedgerEntry
 } from "../controllers/ledgerController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 
@@ -18,7 +19,7 @@ router.post("/payment", recordPayment);
 router.post("/manual-entry", createManualLedgerEntry);
 
 // Get ledger entries for an entity
-// @ts-ignore
-router.get("/", getLedger);
+router.get("/get-all", getLedgers);
+router.get("/get-entity-ledger", getLedgerByEntity);
 
 export default router;

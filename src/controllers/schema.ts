@@ -35,7 +35,7 @@ export const createTicketSchema = Joi.object({
     "string.empty": "Ticket Number is required.",
     "any.required": "Ticket Number is required.",
   }),
-  clientName: Joi.string().required().messages({
+  passengerName: Joi.string().required().messages({
     "string.empty": "Client Name is required.",
     "any.required": "Client Name is required.",
   }),
