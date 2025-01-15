@@ -1,14 +1,14 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface Payment extends Document {
-  entityId: string;  // ID of agent or client
-  entityType: string;  // "agent" or "client"
+  entityId: string; // ID of agent or client
+  entityType: string; // "agent" or "client"
   amount: number;
   paymentMethod: string;
   paymentDate: Date;
   referenceNumber: string;
   description: string;
-  relatedTickets: string[];  // Array of ticket IDs this payment is for
+  relatedTickets: string[]; // Array of ticket IDs this payment is for
 }
 
 const paymentSchema: Schema = new Schema(
@@ -16,38 +16,40 @@ const paymentSchema: Schema = new Schema(
     entityId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      refPath: 'entityType'
+      refPath: "entityType",
     },
     entityType: {
       type: String,
       required: true,
-      enum: ['Agents', 'Client']
+      enum: ["Agents", "Tickets"],
     },
     amount: {
       type: Number,
-      required: true
+      required: true,
     },
     paymentMethod: {
       type: String,
-      required: true
+      required: true,
     },
     paymentDate: {
       type: Date,
       required: true,
-      default: Date.now
+      default: Date.now,
     },
     referenceNumber: {
       type: String,
-      required: true
+      required: true,
     },
     description: {
       type: String,
-      required: true
+      required: true,
     },
-    relatedTickets: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Ticket"
-    }]
+    relatedTickets: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Tickets",
+      },
+    ],
   },
   { timestamps: true }
 );
