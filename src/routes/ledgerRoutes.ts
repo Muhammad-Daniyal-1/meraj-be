@@ -3,7 +3,8 @@ import {
   recordPayment,
   getLedgerByEntity,
   getLedgers,
-  createManualLedgerEntry
+  createManualLedgerEntry,
+  getLedgerSummary,
 } from "../controllers/ledgerController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 
@@ -18,8 +19,11 @@ router.post("/payment", recordPayment);
 // Create manual ledger entry
 router.post("/manual-entry", createManualLedgerEntry);
 
+// Get summary of all ledgers (new endpoint)
+router.get("/summary", getLedgerSummary);
+
 // Get ledger entries for an entity
 router.get("/get-all", getLedgers);
-router.get("/get-entity-ledger", getLedgerByEntity);
+router.get("/get-entity-ledger/:entityId", getLedgerByEntity);
 
 export default router;

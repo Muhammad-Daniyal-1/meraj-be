@@ -20,16 +20,16 @@ export const getTickets = async (req: Request, res: Response) => {
           from: "providers",
           localField: "provider",
           foreignField: "_id",
-          as: "providerData"
-        }
+          as: "providerData",
+        },
       },
       {
         $lookup: {
           from: "agents",
           localField: "agent",
           foreignField: "_id",
-          as: "agentData"
-        }
+          as: "agentData",
+        },
       },
       {
         $addFields: {
@@ -38,28 +38,28 @@ export const getTickets = async (req: Request, res: Response) => {
               if: { $gt: [{ $size: "$providerData" }, 0] },
               then: {
                 _id: { $arrayElemAt: ["$providerData._id", 0] },
-                name: { $arrayElemAt: ["$providerData.name", 0] }
+                name: { $arrayElemAt: ["$providerData.name", 0] },
               },
-              else: null
-            }
+              else: null,
+            },
           },
           agent: {
             $cond: {
               if: { $gt: [{ $size: "$agentData" }, 0] },
               then: {
                 _id: { $arrayElemAt: ["$agentData._id", 0] },
-                name: { $arrayElemAt: ["$agentData.name", 0] }
+                name: { $arrayElemAt: ["$agentData.name", 0] },
               },
-              else: null
-            }
-          }
-        }
+              else: null,
+            },
+          },
+        },
       },
       {
         $project: {
           providerData: 0,
-          agentData: 0
-        }
+          agentData: 0,
+        },
       }
     );
 
@@ -75,51 +75,49 @@ export const getTickets = async (req: Request, res: Response) => {
             { passengerName: { $regex: search, $options: "i" } },
             { departureDate: { $regex: search, $options: "i" } },
             { "provider.name": { $regex: search, $options: "i" } },
-            { "agent.name": { $regex: search, $options: "i" } }
-          ]
-        }
+            { "agent.name": { $regex: search, $options: "i" } },
+          ],
+        },
       });
     }
 
     // Add count facet for pagination
-    pipeline.push(
-      {
-        $facet: {
-          metadata: [{ $count: "total" }],
-          data: [
-            { $sort: { createdAt: -1 } },
-            { $skip: (pageNumber - 1) * limitNumber },
-            { $limit: limitNumber },
-            {
-              $project: {
-                _id: 1,
-                ticketNumber: 1,
-                passengerName: 1,
-                operationType: 1,
-                issueDate: 1,
-                departureDate: 1,
-                returnDate: 1,
-                departure: 1,
-                destination: 1,
-                pnr: 1,
-                providerCost: 1,
-                consumerCost: 1,
-                profit: 1,
-                reference: 1,
-                clientPaymentMethod: 1,
-                paymentToProvider: 1,
-                segment: 1,
-                furtherDescription: 1,
-                provider: 1,
-                agent: 1,
-                createdAt: 1,
-                updatedAt: 1
-              }
-            }
-          ]
-        }
-      }
-    );
+    pipeline.push({
+      $facet: {
+        metadata: [{ $count: "total" }],
+        data: [
+          { $sort: { createdAt: -1 } },
+          { $skip: (pageNumber - 1) * limitNumber },
+          { $limit: limitNumber },
+          {
+            $project: {
+              _id: 1,
+              ticketNumber: 1,
+              passengerName: 1,
+              operationType: 1,
+              issueDate: 1,
+              departureDate: 1,
+              returnDate: 1,
+              departure: 1,
+              destination: 1,
+              pnr: 1,
+              providerCost: 1,
+              consumerCost: 1,
+              profit: 1,
+              reference: 1,
+              clientPaymentMethod: 1,
+              paymentToProvider: 1,
+              segment: 1,
+              furtherDescription: 1,
+              provider: 1,
+              agent: 1,
+              createdAt: 1,
+              updatedAt: 1,
+            },
+          },
+        ],
+      },
+    });
 
     const result = await Tickets.aggregate(pipeline as any);
 
@@ -150,8 +148,8 @@ export const getTicketById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const ticket = await Tickets.findById(id)
-      .populate('provider', 'name')
-      .populate('agent', 'name');
+      .populate("provider", "name")
+      .populate("agent", "name");
 
     if (!ticket) {
       res.status(404).json({ success: false, message: "Ticket not found" });
@@ -192,15 +190,15 @@ export const createTicket = async (req: Request, res: Response) => {
 
     const newTicket = await Tickets.create({ ...value, user });
     const populatedTicket = await Tickets.findById(newTicket._id)
-      .populate('provider', 'name')
-      .populate('agent', 'name');
+      .populate("provider", "name")
+      .populate("agent", "name");
 
     // Create ledger entry if there's an agent or if there's remaining payment
     if (value.agent || value.consumerCost > 0) {
       try {
         await createTicketLedgerEntry(
           value.agent || newTicket._id,
-          value.agent ? 'Agents' : 'Client',
+          value.agent ? "Agents" : "Tickets",
           // @ts-ignore
           newTicket._id,
           value.consumerCost,
@@ -241,8 +239,8 @@ export const updateTicket = async (req: Request, res: Response) => {
     );
 
     const populatedTicket = await Tickets.findById(updatedTicket?._id)
-      .populate('provider', 'name')
-      .populate('agent', 'name');
+      .populate("provider", "name")
+      .populate("agent", "name");
 
     res.json({ success: true, ticket: populatedTicket });
   } catch (error) {
