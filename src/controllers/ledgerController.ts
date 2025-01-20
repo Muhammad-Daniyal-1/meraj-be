@@ -11,6 +11,7 @@ interface PaymentRequestBody {
   referenceNumber: string;
   description: string;
   relatedTickets?: string[];
+  date?: string;
 }
 
 interface ManualLedgerEntryBody {
@@ -80,7 +81,10 @@ export const recordPayment = async (
       referenceNumber,
       description,
       relatedTickets = [],
+      date,
     } = req.body;
+
+    const user = (req as any).userId;
 
     // Get current balance
     const lastEntry = await Ledger.findOne({ entityId }).sort({
@@ -98,9 +102,11 @@ export const recordPayment = async (
       paymentMethod,
       referenceNumber,
       description,
-      relatedTickets: relatedTickets.map(
-        (id) => new mongoose.Types.ObjectId(id)
-      ),
+      paymentDate: date,
+      user,
+      // relatedTickets: relatedTickets.map(
+      //   (id) => new mongoose.Types.ObjectId(id)
+      // ),
     });
 
     // Create ledger entry for payment
@@ -112,6 +118,7 @@ export const recordPayment = async (
       balance: newBalance,
       description: `Payment received - ${referenceNumber}`,
       referenceNumber,
+      date,
     });
 
     await Promise.all([payment.save(), ledgerEntry.save()]);
@@ -140,19 +147,12 @@ export const getLedgerByEntity = async (
     // Extract query parameters and path parameters
     const {
       page = "1",
-      limit = "10",
+      limit = "20",
       startDate,
       endDate,
     } = req.query as LedgerQueryParams;
     const { entityId } = req.params;
-    console.log("Received Query Parameters:", {
-      entityId,
-      page,
-      limit,
-      startDate,
-      endDate,
-    });
-
+    
     // Validate required fields
     if (!entityId) {
       res.status(400).json({
@@ -191,8 +191,6 @@ export const getLedgerByEntity = async (
     const finalQuery =
       startDate || endDate ? { entityId, ...dateQuery } : { entityId };
 
-    console.log("Final MongoDB Query:", finalQuery);
-
     // Query the database
     const ledgerEntries = await Ledger.find(finalQuery)
       .sort({ createdAt: -1 })
@@ -204,27 +202,28 @@ export const getLedgerByEntity = async (
     const populatedLedgers = await Promise.all(
       ledgerEntries.map(async (ledger) => {
         const ledgerObj = ledger.toObject();
-
+    
         if (ledger.entityType === "Agents") {
           const agent = await mongoose
             .model("Agents")
             .findById(ledger.entityId)
             .select("name")
             .lean();
-          // ledgerObj.entityId = agent;
+    
+          ledgerObj.entityId = agent || { name: "Unknown Agent" }; // Handle null case
         } else if (ledger.entityType === "Tickets") {
           const ticket = await mongoose
             .model("Tickets")
             .findById(ledger.entityId)
             .select("ticketNumber passengerName")
             .lean();
-          // ledgerObj.entityId = ticket;
+    
+          ledgerObj.entityId = ticket || { ticketNumber: "Unknown", passengerName: "Unknown" }; // Handle null case
         }
-
+    
         return ledgerObj;
       })
     );
-
     // Count total documents matching the query
     const totalLedgers = await Ledger.countDocuments(finalQuery);
 
@@ -248,6 +247,7 @@ export const getLedgerByEntity = async (
     });
   }
 };
+
 export const getLedgers = async (req: Request, res: Response) => {
   try {
     const { page = 1, limit = 20, search = "" } = req.query;
@@ -266,7 +266,6 @@ export const getLedgers = async (req: Request, res: Response) => {
             { amount: { $regex: search, $options: "i" } },
             { balance: { $regex: search, $options: "i" } },
             { description: { $regex: search, $options: "i" } },
-            { date: { $regex: search, $options: "i" } },
             { referenceNumber: { $regex: search, $options: "i" } },
           ],
         }
@@ -445,6 +444,61 @@ export const createManualLedgerEntry = async (
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error occurred",
+    });
+  }
+};
+
+export const getAllPayments = async (req: Request, res: Response) => {
+  try {
+    const { page = 1, limit = 20, search = "" } = req.query;
+
+    const pageNumber = parseInt(page as string, 10);
+    const limitNumber = parseInt(limit as string, 10);
+    const user = (req as any).userId; // Assuming user is attached to req by middleware
+
+    // Query for search functionality
+    const searchQuery = search
+      ? {
+          $or: [
+            { id: { $regex: search, $options: "i" } },
+            { description: { $regex: search, $options: "i" } },
+            { amount: { $regex: search, $options: "i" } },
+            { status: { $regex: search, $options: "i" } },
+          ],
+        }
+      : {};
+
+    // Role-based query adjustment
+    const roleQuery = user.role === "admin" ? {} : { createdBy: user._id };
+
+    // Combined query
+    const query = { ...searchQuery, ...roleQuery };
+
+    // Fetching payments with pagination and search query
+    const payments = await Payment.find(query)
+      .sort({ createdAt: -1 })
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber);
+
+    // Total count for pagination
+    const totalPayments = await Payment.countDocuments(query);
+
+    res.json({
+      success: true,
+      message: "Payments fetched successfully",
+      payments,  
+      pagination: {
+        currentPage: pageNumber,
+        totalPages: Math.ceil(totalPayments / limitNumber),
+        totalPayments,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching payments:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch payments",
+      error: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };

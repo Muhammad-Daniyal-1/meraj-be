@@ -1,14 +1,14 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface Ledger extends Document {
-  entityId: string;  // ID of agent or client
+  entityId: string | Record<string, any>;  // ID of agent or client
   entityType: string;  // "agent" or "client"
   ticketId: string;
   transactionType: string;  // "debit" or "credit"
   amount: number;
   balance: number;
   description: string;
-  date: Date;
+  date: String;
   referenceNumber: string;  // ticket number or payment reference
 }
 
@@ -47,13 +47,12 @@ const ledgerSchema: Schema = new Schema(
       required: true
     },
     date: {
-      type: Date,
+      type: String,
       required: true,
       default: Date.now
     },
     referenceNumber: {
       type: String,
-      required: true
     }
   },
   { timestamps: true }
