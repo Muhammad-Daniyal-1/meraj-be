@@ -11,7 +11,7 @@ interface PaymentRequestBody {
   referenceNumber: string;
   description: string;
   relatedTickets?: string[];
-  date?: string;
+  paymentDate?: string;
 }
 
 interface ManualLedgerEntryBody {
@@ -80,8 +80,7 @@ export const recordPayment = async (
       paymentMethod,
       referenceNumber,
       description,
-      relatedTickets = [],
-      date,
+      paymentDate,
     } = req.body;
 
     const user = (req as any).userId;
@@ -102,11 +101,8 @@ export const recordPayment = async (
       paymentMethod,
       referenceNumber,
       description,
-      paymentDate: date,
+      paymentDate,
       user,
-      // relatedTickets: relatedTickets.map(
-      //   (id) => new mongoose.Types.ObjectId(id)
-      // ),
     });
 
     // Create ledger entry for payment
@@ -118,7 +114,7 @@ export const recordPayment = async (
       balance: newBalance,
       description: `Payment received - ${referenceNumber}`,
       referenceNumber,
-      date,
+      date: paymentDate,
     });
 
     await Promise.all([payment.save(), ledgerEntry.save()]);
@@ -152,7 +148,7 @@ export const getLedgerByEntity = async (
       endDate,
     } = req.query as LedgerQueryParams;
     const { entityId } = req.params;
-    
+
     // Validate required fields
     if (!entityId) {
       res.status(400).json({
@@ -202,14 +198,14 @@ export const getLedgerByEntity = async (
     const populatedLedgers = await Promise.all(
       ledgerEntries.map(async (ledger) => {
         const ledgerObj = ledger.toObject();
-    
+
         if (ledger.entityType === "Agents") {
           const agent = await mongoose
             .model("Agents")
             .findById(ledger.entityId)
             .select("name")
             .lean();
-    
+
           ledgerObj.entityId = agent || { name: "Unknown Agent" }; // Handle null case
         } else if (ledger.entityType === "Tickets") {
           const ticket = await mongoose
@@ -217,10 +213,13 @@ export const getLedgerByEntity = async (
             .findById(ledger.entityId)
             .select("ticketNumber passengerName")
             .lean();
-    
-          ledgerObj.entityId = ticket || { ticketNumber: "Unknown", passengerName: "Unknown" }; // Handle null case
+
+          ledgerObj.entityId = ticket || {
+            ticketNumber: "Unknown",
+            passengerName: "Unknown",
+          }; // Handle null case
         }
-    
+
         return ledgerObj;
       })
     );
@@ -454,7 +453,7 @@ export const getAllPayments = async (req: Request, res: Response) => {
 
     const pageNumber = parseInt(page as string, 10);
     const limitNumber = parseInt(limit as string, 10);
-    const user = (req as any).userId; // Assuming user is attached to req by middleware
+    const user = (req as any).userId;
 
     // Query for search functionality
     const searchQuery = search
@@ -478,7 +477,29 @@ export const getAllPayments = async (req: Request, res: Response) => {
     const payments = await Payment.find(query)
       .sort({ createdAt: -1 })
       .skip((pageNumber - 1) * limitNumber)
-      .limit(limitNumber);
+      .limit(limitNumber)
+      .lean()
+      .populate("user", "name username");
+
+    // Populate the name or passengerName based on entityType
+    const populatedPayments = await Promise.all(
+      payments.map(async (payment) => {
+        if (payment.entityType === "Agents") {
+          const agent = await mongoose
+            .model("Agents")
+            .findById(payment.entityId)
+            .select("name");
+          return { ...payment, name: agent?.name || null };
+        } else if (payment.entityType === "Tickets") {
+          const ticket = await mongoose
+            .model("Tickets")
+            .findById(payment.entityId)
+            .select("passengerName");
+          return { ...payment, name: ticket?.passengerName || null };
+        }
+        return payment;
+      })
+    );
 
     // Total count for pagination
     const totalPayments = await Payment.countDocuments(query);
@@ -486,7 +507,7 @@ export const getAllPayments = async (req: Request, res: Response) => {
     res.json({
       success: true,
       message: "Payments fetched successfully",
-      payments,  
+      payments: populatedPayments,
       pagination: {
         currentPage: pageNumber,
         totalPages: Math.ceil(totalPayments / limitNumber),

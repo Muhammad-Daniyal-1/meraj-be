@@ -1,15 +1,15 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface Ledger extends Document {
-  entityId: string | Record<string, any>;  // ID of agent or client
-  entityType: string;  // "agent" or "client"
+  entityId: string | Record<string, any>; // ID of agent or client
+  entityType: string; // "agent" or "client"
   ticketId: string;
-  transactionType: string;  // "debit" or "credit"
+  transactionType: string; // "debit" or "credit"
   amount: number;
   balance: number;
   description: string;
-  date: String;
-  referenceNumber: string;  // ticket number or payment reference
+  date: Date;
+  referenceNumber: string; // ticket number or payment reference
 }
 
 const ledgerSchema: Schema = new Schema(
@@ -17,43 +17,43 @@ const ledgerSchema: Schema = new Schema(
     entityId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      refPath: 'entityType'
+      refPath: "entityType",
     },
     entityType: {
       type: String,
       required: true,
-      enum: ['Agents', 'Tickets']
+      enum: ["Agents", "Tickets"],
     },
     ticketId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Tickets",
-      required: false
+      required: false,
     },
     transactionType: {
       type: String,
       required: true,
-      enum: ['debit', 'credit']
+      enum: ["debit", "credit"],
     },
     amount: {
       type: Number,
-      required: true
+      required: true,
     },
     balance: {
       type: Number,
-      required: true
+      required: true,
     },
     description: {
       type: String,
-      required: true
+      required: true,
     },
     date: {
-      type: String,
+      type: Date,
       required: true,
-      default: Date.now
+      default: new Date(Date.now()),
     },
     referenceNumber: {
       type: String,
-    }
+    },
   },
   { timestamps: true }
 );

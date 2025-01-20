@@ -5,6 +5,7 @@ import {
   getLedgers,
   createManualLedgerEntry,
   getLedgerSummary,
+  getAllPayments,
 } from "../controllers/ledgerController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 
@@ -14,7 +15,8 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // Record a payment
-router.post("/payment", recordPayment);
+router.post("/payment", authMiddleware, recordPayment);
+router.get("/payment", authMiddleware, getAllPayments);
 
 // Create manual ledger entry
 router.post("/manual-entry", createManualLedgerEntry);

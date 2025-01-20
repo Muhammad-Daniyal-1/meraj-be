@@ -7,9 +7,9 @@ export interface Ticket extends Document {
   providerId: string;
   agent: string;
   operationType: string;
-  issueDate: string;
-  departureDate: string;
-  returnDate: string;
+  issueDate: Date;
+  departureDate: Date;
+  returnDate: Date;
   departure: string;
   destination: string;
   pnr: string;
@@ -43,9 +43,9 @@ const ticketSchema: Schema = new Schema(
       required: false,
     },
     operationType: { type: String, required: true },
-    issueDate: { type: String, required: true },
-    departureDate: { type: String, required: true },
-    returnDate: { type: String, required: true },
+    issueDate: { type: Date, required: true },
+    departureDate: { type: Date, required: true },
+    returnDate: { type: Date, required: true },
     departure: { type: String, required: true },
     destination: { type: String, required: true },
     pnr: { type: String, required: true },

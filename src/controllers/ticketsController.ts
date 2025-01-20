@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { Tickets } from "../models/ticketsModel";
 import { createTicketSchema } from "./schema";
 import { createTicketLedgerEntry } from "./ledgerController";
-import mongoose from "mongoose";
 
 export const getTickets = async (req: Request, res: Response) => {
   try {

@@ -5,7 +5,7 @@ export interface Payment extends Document {
   entityType: string; // "agent" or "client"
   amount: number;
   paymentMethod: string;
-  paymentDate: String;
+  paymentDate: Date;
   referenceNumber: string;
   description: string;
 }
@@ -35,7 +35,7 @@ const paymentSchema: Schema = new Schema(
       type: String,
     },
     paymentDate: {
-      type: String,
+      type: Date,
       required: true,
       default: Date.now,
     },
