@@ -57,6 +57,7 @@ const ticketSchema: Schema = new Schema(
     paymentToProvider: { type: String, required: true },
     segment: { type: String, required: true },
     furtherDescription: { type: String },
+    paymentType: { type: String, required: true },
   },
   { timestamps: true }
 );

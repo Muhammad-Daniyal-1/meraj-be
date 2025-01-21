@@ -104,4 +104,8 @@ export const createTicketSchema = Joi.object({
   furtherDescription: Joi.string().optional().allow(null, "").messages({
     "string.empty": "Further Description should be a string or empty.",
   }),
+  paymentType: Joi.string().required().messages({
+    "string.empty": "Payment Type is required.",
+    "any.required": "Payment Type is required.",
+  }),
 });

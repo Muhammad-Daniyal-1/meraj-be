@@ -447,33 +447,152 @@ export const createManualLedgerEntry = async (
   }
 };
 
+// export const getAllPayments = async (req: Request, res: Response) => {
+//   try {
+//     const { page = 1, limit = 20, search = "" } = req.query;
+
+//     const pageNumber = parseInt(page as string, 10);
+//     const limitNumber = parseInt(limit as string, 10);
+//     const user = (req as any).userId;
+
+//     // Query for search functionality
+//     const searchQuery = search
+//       ? {
+//           $or: [
+//             { id: { $regex: search, $options: "i" } },
+//             { description: { $regex: search, $options: "i" } },
+//             // { amount: { $regex: search, $options: "i" } },
+//             { status: { $regex: search, $options: "i" } },
+//           ],
+//         }
+//       : {};
+
+//     // Role-based query adjustment
+//     const roleQuery = user.role === "admin" ? {} : { createdBy: user._id };
+
+//     // Combined query
+//     const query = { ...searchQuery, ...roleQuery };
+
+//     // Fetching payments with pagination and search query
+//     const payments = await Payment.find(query)
+//       .sort({ createdAt: -1 })
+//       .skip((pageNumber - 1) * limitNumber)
+//       .limit(limitNumber)
+//       .lean()
+//       .populate("user", "name username");
+
+//     // Populate the name or passengerName based on entityType
+//     const populatedPayments = await Promise.all(
+//       payments.map(async (payment) => {
+//         if (payment.entityType === "Agents") {
+//           const agent = await mongoose
+//             .model("Agents")
+//             .findById(payment.entityId)
+//             .select("name");
+//           return { ...payment, name: agent?.name || null };
+//         } else if (payment.entityType === "Tickets") {
+//           const ticket = await mongoose
+//             .model("Tickets")
+//             .findById(payment.entityId)
+//             .select("passengerName");
+//           return { ...payment, name: ticket?.passengerName || null };
+//         }
+//         return payment;
+//       })
+//     );
+
+//     // Total count for pagination
+//     const totalPayments = await Payment.countDocuments(query);
+
+//     res.json({
+//       success: true,
+//       message: "Payments fetched successfully",
+//       payments: populatedPayments,
+//       pagination: {
+//         currentPage: pageNumber,
+//         totalPages: Math.ceil(totalPayments / limitNumber),
+//         totalPayments,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Error fetching payments:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to fetch payments",
+//       error: error instanceof Error ? error.message : "Internal Server Error",
+//     });
+//   }
+// };
+
 export const getAllPayments = async (req: Request, res: Response) => {
   try {
-    const { page = 1, limit = 20, search = "" } = req.query;
+    const {
+      page = 1,
+      limit = 20,
+      search = "",
+      startDate,
+      endDate,
+      minAmount,
+      maxAmount,
+    } = req.query;
 
     const pageNumber = parseInt(page as string, 10);
     const limitNumber = parseInt(limit as string, 10);
     const user = (req as any).userId;
 
-    // Query for search functionality
-    const searchQuery = search
-      ? {
-          $or: [
-            { id: { $regex: search, $options: "i" } },
-            { description: { $regex: search, $options: "i" } },
-            { amount: { $regex: search, $options: "i" } },
-            { status: { $regex: search, $options: "i" } },
-          ],
-        }
-      : {};
+    // Base query
+    const query: any = {};
 
     // Role-based query adjustment
-    const roleQuery = user.role === "admin" ? {} : { createdBy: user._id };
+    if (user.role !== "admin") {
+      query.createdBy = user._id;
+    }
 
-    // Combined query
-    const query = { ...searchQuery, ...roleQuery };
+    // Search query (username, agent name, passenger name, description)
+    if (search) {
+      query.$or = [
+        { description: { $regex: search, $options: "i" } },
+        { paymentMethod: { $regex: search, $options: "i" } },
+      ];
 
-    // Fetching payments with pagination and search query
+      // Dynamically add entity-specific searches
+      const agents = await mongoose
+        .model("Agents")
+        .find({ name: { $regex: search, $options: "i" } })
+        .select("_id");
+      const tickets = await mongoose
+        .model("Tickets")
+        .find({ passengerName: { $regex: search, $options: "i" } })
+        .select("_id");
+      const users = await mongoose
+        .model("User")
+        .find({ name: { $regex: search, $options: "i" } })
+        .select("_id");
+
+      if (agents.length > 0 || tickets.length > 0 || users.length > 0) {
+        query.$or.push(
+          { entityId: { $in: agents.map((agent: any) => agent._id) } },
+          { entityId: { $in: tickets.map((ticket: any) => ticket._id) } },
+          { entityId: { $in: users.map((user: any) => user._id) } }
+        );
+      }
+    }
+
+    // Amount filtering
+    if (minAmount || maxAmount) {
+      query.amount = {};
+      if (minAmount) query.amount.$gte = parseFloat(minAmount as string);
+      if (maxAmount) query.amount.$lte = parseFloat(maxAmount as string);
+    }
+
+    // Date range filtering
+    if (startDate || endDate) {
+      query.paymentDate = {};
+      if (startDate) query.paymentDate.$gte = new Date(startDate as string);
+      if (endDate) query.paymentDate.$lte = new Date(endDate as string);
+    }
+
+    // Fetch payments
     const payments = await Payment.find(query)
       .sort({ createdAt: -1 })
       .skip((pageNumber - 1) * limitNumber)
@@ -481,7 +600,7 @@ export const getAllPayments = async (req: Request, res: Response) => {
       .lean()
       .populate("user", "name username");
 
-    // Populate the name or passengerName based on entityType
+    // Populate agent or passenger names
     const populatedPayments = await Promise.all(
       payments.map(async (payment) => {
         if (payment.entityType === "Agents") {

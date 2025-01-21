@@ -193,7 +193,7 @@ export const createTicket = async (req: Request, res: Response) => {
       .populate("agent", "name");
 
     // Create ledger entry if there's an agent or if there's remaining payment
-    if (value.agent || value.consumerCost > 0) {
+    if (value.agent || (!value.agent && value.paymentType === "Partial")) {
       try {
         await createTicketLedgerEntry(
           value.agent || newTicket._id,
