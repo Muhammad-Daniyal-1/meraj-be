@@ -7,6 +7,7 @@ export interface Agents extends Document {
   email: string;
   phone: string;
   address: string;
+  cf: string;
 }
 
 const agentsSchema: Schema = new Schema(
@@ -20,7 +21,8 @@ const agentsSchema: Schema = new Schema(
     name: { type: String, required: true },
     email: { type: String, required: true },
     phone: { type: String, required: true },
-    address: { type: String, required: true },
+    address: { type: String },
+    cf: { type: String },
   },
   { timestamps: true }
 );

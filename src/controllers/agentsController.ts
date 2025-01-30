@@ -18,6 +18,7 @@ export const getAgents = async (req: Request, res: Response) => {
             { email: { $regex: search, $options: "i" } },
             { phone: { $regex: search, $options: "i" } },
             { address: { $regex: search, $options: "i" } },
+            { cf: { $regex: search, $options: "i" } },
           ],
         }
       : {};
