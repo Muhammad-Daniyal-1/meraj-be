@@ -231,6 +231,7 @@ export const getTickets = async (req: Request, res: Response) => {
               then: {
                 _id: { $arrayElemAt: ["$providerData._id", 0] },
                 name: { $arrayElemAt: ["$providerData.name", 0] },
+                id: { $arrayElemAt: ["$providerData.id", 0] },
               },
               else: null,
             },
@@ -241,6 +242,7 @@ export const getTickets = async (req: Request, res: Response) => {
               then: {
                 _id: { $arrayElemAt: ["$agentData._id", 0] },
                 name: { $arrayElemAt: ["$agentData.name", 0] },
+                id: { $arrayElemAt: ["$agentData.id", 0] },
               },
               else: null,
             },
@@ -344,54 +346,66 @@ export const getTicketById = async (req: Request, res: Response) => {
 
 export const createTicket = async (req: Request, res: Response) => {
   try {
+    // Validate the request body using Joi
     const { error, value } = createTicketSchema.validate(req.body, {
       abortEarly: false,
     });
-
     if (error) {
       res.status(400).json({ success: false, error: error.details });
       return;
     }
 
-    const existingTicket = await Tickets.findOne({
-      ticketNumber: value.ticketNumber,
-    });
+    // Normalize ticket number by trimming whitespace.
+    const normalizedTicketNumber = value.ticketNumber.trim();
+    value.ticketNumber = normalizedTicketNumber; // update the value
 
-    if (existingTicket) {
-      res.status(400).json({ success: false, error: "Ticket already exists" });
-      return;
+    // If the ticket number is NOT an all-zeros value, check for duplicates.
+    if (
+      normalizedTicketNumber !== "0000000000000" &&
+      normalizedTicketNumber !== "0000000000000000"
+    ) {
+      const existingTicket = await Tickets.findOne({
+        ticketNumber: normalizedTicketNumber,
+      });
+      if (existingTicket) {
+        res
+          .status(400)
+          .json({ success: false, error: "Ticket already exists" });
+        return;
+      }
     }
 
+    // Retrieve the user id (assuming authentication middleware sets this)
     const user = (req as any).userId;
 
+    // Create the new ticket document
     const newTicket = await Tickets.create({ ...value, user });
     const populatedTicket = await Tickets.findById(newTicket._id)
       .populate("provider", "name")
       .populate("agent", "name");
 
-    // Create ledger entry if there's an agent or if there's remaining payment
+    // Optionally, create a ledger entry if an agent exists or if payment is partial.
     if (value.agent || (!value.agent && value.paymentType === "Partial")) {
       try {
         await createTicketLedgerEntry(
           value.agent || newTicket._id,
           value.agent ? "Agents" : "Tickets",
-          // @ts-ignore
-          newTicket._id,
+          newTicket._id as string,
           value.consumerCost,
-          value.ticketNumber
+          normalizedTicketNumber
         );
       } catch (ledgerError) {
-        // If ledger creation fails, we should log it but not fail the ticket creation
+        // Log ledger errors without failing the ticket creation
         console.error("Error creating ledger entry:", ledgerError);
       }
     }
 
     res.json({ success: true, ticket: populatedTicket });
-  } catch (error) {
-    console.error("Error creating ticket:", error);
+  } catch (err) {
+    console.error("Error creating ticket:", err);
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Internal Server Error",
+      error: err instanceof Error ? err.message : "Internal Server Error",
     });
   }
 };

@@ -33,81 +33,141 @@ export const createProviderSchema = Joi.object({
 });
 
 export const createTicketSchema = Joi.object({
-  ticketNumber: Joi.string().required().messages({
-    "string.empty": "Ticket Number is required.",
-    "any.required": "Ticket Number is required.",
-  }),
+  // Ticket Number must be exactly 13 or 16 digits.
+
   passengerName: Joi.string().required().messages({
     "string.empty": "Client Name is required.",
     "any.required": "Client Name is required.",
   }),
+
   provider: Joi.string().required().messages({
     "string.empty": "Provider ID is required.",
     "any.required": "Provider ID is required.",
   }),
+
+  // Agent is optional – it may be empty for direct customers.
   agent: Joi.string().optional().allow(null, "").messages({
     "string.empty": "Agent should be a valid ID or empty.",
   }),
+
   operationType: Joi.string().required().messages({
     "string.empty": "Operation Type is required.",
     "any.required": "Operation Type is required.",
   }),
-  issueDate: Joi.date().iso().required().messages({
-    "date.base": "Issue Date must be a valid date.",
-    "any.required": "Issue Date is required.",
-  }),
-  departureDate: Joi.date().iso().required().messages({
-    "date.base": "Departure Date must be a valid date.",
-    "any.required": "Departure Date is required.",
-  }),
-  returnDate: Joi.date().iso().required().messages({
-    "date.base": "Return Date must be a valid date.",
-    "any.required": "Return Date is required.",
-  }),
-  departure: Joi.string().required().messages({
-    "string.empty": "Departure (City or Airport code) is required.",
-    "any.required": "Departure is required.",
-  }),
-  destination: Joi.string().required().messages({
-    "string.empty": "Destination (City or Airport code) is required.",
-    "any.required": "Destination is required.",
-  }),
-  pnr: Joi.string().required().messages({
-    "string.empty": "PNR is required.",
-    "any.required": "PNR is required.",
-  }),
-  providerCost: Joi.number().min(0).required().messages({
+
+  // Flight fields (conditionally required)
+  ticketNumber: Joi.string().optional(),
+  airlineCode: Joi.string().optional(),
+  issueDate: Joi.date().iso().optional(),
+  departureDate: Joi.date().iso().optional(),
+  returnDate: Joi.date().iso().optional(),
+  departure: Joi.string().optional(),
+  destination: Joi.string().optional(),
+  pnr: Joi.string().optional(),
+  providerCost: Joi.number().min(0).optional().messages({
     "number.base": "Provider Cost must be a number.",
     "number.min": "Provider Cost must be a non-negative number.",
-    "any.required": "Provider Cost is required.",
   }),
-  consumerCost: Joi.number().min(0).required().messages({
+  consumerCost: Joi.number().min(0).optional().messages({
     "number.base": "Consumer Cost must be a number.",
     "number.min": "Consumer Cost must be a non-negative number.",
-    "any.required": "Consumer Cost is required.",
   }),
-  profit: Joi.number().required().messages({
+  profit: Joi.number().optional().messages({
     "number.base": "Profit must be a number.",
-    "any.required": "Profit is required.",
   }),
+  clientPaymentMethod: Joi.string().optional(),
+  paymentToProvider: Joi.string().optional(),
+  segment: Joi.string().optional(),
+
+  // Always optional fields
   reference: Joi.string().optional().allow(""),
-  clientPaymentMethod: Joi.string().required().messages({
-    "string.empty": "Client Payment Method is required.",
-    "any.required": "Client Payment Method is required.",
-  }),
-  paymentToProvider: Joi.string().required().messages({
-    "string.empty": "Payment to Provider is required.",
-    "any.required": "Payment to Provider is required.",
-  }),
-  segment: Joi.string().required().messages({
-    "string.empty": "Segment is required.",
-    "any.required": "Segment is required.",
-  }),
-  furtherDescription: Joi.string().optional().allow(null, "").messages({
-    "string.empty": "Further Description should be a string or empty.",
-  }),
+  furtherDescription: Joi.string().optional().allow(null, ""),
   paymentType: Joi.string().required().messages({
     "string.empty": "Payment Type is required.",
     "any.required": "Payment Type is required.",
   }),
-});
+
+  // Hotel/Umrah fields
+  checkInDate: Joi.date().iso().optional(),
+  checkOutDate: Joi.date().iso().optional(),
+  hotelName: Joi.string().optional(),
+
+  // Re-Issue/Refund fields
+  providerFee: Joi.number().min(0).optional(),
+  consumerFee: Joi.number().min(0).optional(),
+  providerPaymentDate: Joi.date().iso().optional(),
+  clientPaymentDate: Joi.date().iso().optional(),
+})
+  // Custom validation based on operationType.
+  .custom((value, helpers) => {
+    const { operationType } = value;
+
+    // For flight operations (all types except Hotel/Umrah)
+    if (!["Hotel", "Umrah"].includes(operationType)) {
+      const requiredFlightFields = [
+        "airlineCode",
+        "ticketNumber",
+        "passengerName",
+        "issueDate",
+        "departureDate",
+        "returnDate",
+        "departure",
+        "destination",
+        "pnr",
+        "providerCost",
+        "consumerCost",
+        "profit",
+        "clientPaymentMethod",
+        "paymentToProvider",
+        "segment",
+      ];
+      for (const field of requiredFlightFields) {
+        if (
+          value[field] === undefined ||
+          value[field] === null ||
+          (typeof value[field] === "string" && value[field].trim() === "")
+        ) {
+          return helpers.message(
+            `${field} is required for flight operations.` as any
+          );
+        }
+      }
+    }
+
+    // For Hotel/Umrah operations
+    if (["Hotel", "Umrah"].includes(operationType)) {
+      const requiredHotelFields = [
+        "checkInDate",
+        "checkOutDate",
+        "hotelName",
+        "providerCost",
+        "consumerCost",
+        "profit",
+      ];
+      for (const field of requiredHotelFields) {
+        if (
+          value[field] === undefined ||
+          value[field] === null ||
+          (typeof value[field] === "string" && value[field].trim() === "")
+        ) {
+          return helpers.message(
+            `${field} is required for Hotel/Umrah operations.` as any
+          );
+        }
+      }
+    }
+
+    // For Re-Issue/Refund operations
+    if (["Re-Issue", "Refund"].includes(operationType)) {
+      const requiredFeeFields = ["providerFee", "consumerFee"];
+      for (const field of requiredFeeFields) {
+        if (value[field] === undefined || value[field] === null) {
+          return helpers.message(
+            `${field} is required for Re-Issue/Refund operations.` as any
+          );
+        }
+      }
+    }
+
+    return value;
+  });
