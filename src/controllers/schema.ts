@@ -19,8 +19,8 @@ export const createAgentSchema = Joi.object({
   name: Joi.string().required(),
   email: Joi.string().email().required(),
   phone: Joi.string().required(),
-  address: Joi.string(),
-  cf: Joi.string(),
+  address: Joi.string().optional().allow(null, ""),
+  cf: Joi.string().optional().allow(null, ""),
 });
 
 export const createProviderSchema = Joi.object({
@@ -28,8 +28,8 @@ export const createProviderSchema = Joi.object({
   name: Joi.string().required(),
   email: Joi.string().email().required(),
   phone: Joi.string().required(),
-  address: Joi.string(),
-  cf: Joi.string(),
+  address: Joi.string().optional().allow(null, ""),
+  cf: Joi.string().optional().allow(null, ""),
 });
 
 export const createTicketSchema = Joi.object({

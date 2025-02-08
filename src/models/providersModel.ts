@@ -21,8 +21,8 @@ const providersSchema: Schema = new Schema(
     name: { type: String, required: true },
     email: { type: String, required: true },
     phone: { type: String, required: true },
-    address: { type: String },
-    cf: { type: String },
+    address: { type: String, optional: true },
+    cf: { type: String, optional: true },
   },
   { timestamps: true }
 );

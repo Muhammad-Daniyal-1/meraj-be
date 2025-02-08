@@ -47,8 +47,7 @@ export const getAgents = async (req: Request, res: Response) => {
     console.error("Error fetching agents:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch agents",
-      error: error instanceof Error ? error.message : "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };
@@ -63,12 +62,12 @@ export const getAgentById = async (req: Request, res: Response) => {
       return;
     }
 
-    res.json({ success: true, agent });
+    res.json({ success: true, message: "Agent fetched successfully", agent });
   } catch (error) {
     console.error("Error fetching agent:", error);
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };
@@ -80,24 +79,29 @@ export const createAgent = async (req: Request, res: Response) => {
     });
 
     if (error) {
-      res.status(400).json({ success: false, error: error.details });
+      res.status(400).json({ success: false, message: error.details });
+      return;
     }
 
     const existingAgent = await Agents.findOne({ id: value.id });
     if (existingAgent) {
-      res.status(400).json({ success: false, error: "Agent already exists" });
+      res.status(400).json({ success: false, message: "Agent already exists" });
       return;
     }
 
     const user = (req as any).userId;
 
     const newAgent = await Agents.create({ ...value, user });
-    res.json({ success: true, agent: newAgent });
+    res.json({
+      success: true,
+      message: "Agent created successfully",
+      agent: newAgent,
+    });
   } catch (error) {
     console.error("Error creating agent:", error);
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };
@@ -108,7 +112,7 @@ export const updateAgent = async (req: Request, res: Response) => {
 
     const existingAgent = await Agents.findOne({ _id: id });
     if (!existingAgent) {
-      res.status(404).json({ success: false, error: "Agent not found" });
+      res.status(404).json({ success: false, message: "Agent not found" });
       return;
     }
 
@@ -119,12 +123,12 @@ export const updateAgent = async (req: Request, res: Response) => {
       { ...req.body, user },
       { new: true }
     );
-    res.json({ success: true, agent });
+    res.json({ success: true, message: "Agent updated successfully", agent });
   } catch (error) {
     console.error("Error updating agent:", error);
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };
@@ -147,7 +151,7 @@ export const deleteAgent = async (req: Request, res: Response) => {
     console.error("Error deleting agent:", error);
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };

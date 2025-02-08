@@ -68,7 +68,7 @@ export const getProviderById = async (req: Request, res: Response) => {
     console.error("Error fetching provider:", error);
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };
@@ -80,26 +80,32 @@ export const createProvider = async (req: Request, res: Response) => {
     });
 
     if (error) {
+      console.log(error);
       res.status(400).json({ success: false, error: error.details });
+      return;
     }
 
     const existingProvider = await Providers.findOne({ id: value.id });
     if (existingProvider) {
       res
         .status(400)
-        .json({ success: false, error: "Provider already exists" });
+        .json({ success: false, message: "Provider already exists" });
       return;
     }
 
     const user = (req as any).userId;
 
     const newProvider = await Providers.create({ ...value, user });
-    res.json({ success: true, provider: newProvider });
+    res.json({
+      success: true,
+      message: "Provider created successfully",
+      provider: newProvider,
+    });
   } catch (error) {
     console.error("Error creating provider:", error);
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };
@@ -121,12 +127,16 @@ export const updateProvider = async (req: Request, res: Response) => {
       { ...req.body, user },
       { new: true }
     );
-    res.json({ success: true, provider });
+    res.json({
+      success: true,
+      provider,
+      message: "Provider updated successfully",
+    });
   } catch (error) {
     console.error("Error updating provider:", error);
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };
@@ -149,7 +159,7 @@ export const deleteProvider = async (req: Request, res: Response) => {
     console.error("Error deleting provider:", error);
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };

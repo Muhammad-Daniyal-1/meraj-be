@@ -2,35 +2,11 @@ import { Request, Response } from "express";
 import { Ledger } from "../models/ledgerModel";
 import { Payment } from "../models/paymentModel";
 import mongoose from "mongoose";
-
-interface PaymentRequestBody {
-  entityId: string;
-  entityType: "Agents" | "Client";
-  amount: number;
-  paymentMethod: string;
-  referenceNumber: string;
-  description: string;
-  relatedTickets?: string[];
-  paymentDate?: string;
-}
-
-interface ManualLedgerEntryBody {
-  entityId: string;
-  entityType: "Agents" | "Client";
-  transactionType: "debit" | "credit";
-  amount: number;
-  description: string;
-  referenceNumber: string;
-  date?: string;
-}
-
-interface LedgerQueryParams {
-  entityId?: string;
-  startDate?: string;
-  endDate?: string;
-  page?: string;
-  limit?: string;
-}
+import {
+  LedgerQueryParams,
+  PaymentRequestBody,
+  ManualLedgerEntryBody,
+} from "../types";
 
 export const createTicketLedgerEntry = async (
   entityId: mongoose.Types.ObjectId | string,
