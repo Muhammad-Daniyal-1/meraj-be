@@ -26,7 +26,6 @@ export const getProviders = async (req: Request, res: Response) => {
     // Fetching providers with pagination and search query
     const providers = await Providers.find(query)
       .sort({ createdAt: -1 })
-      .select("-password")
       .skip((pageNumber - 1) * limitNumber)
       .limit(limitNumber);
 
@@ -47,8 +46,7 @@ export const getProviders = async (req: Request, res: Response) => {
     console.error("Error fetching providers:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch providers",
-      error: error instanceof Error ? error.message : "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };
@@ -81,7 +79,7 @@ export const createProvider = async (req: Request, res: Response) => {
 
     if (error) {
       console.log(error);
-      res.status(400).json({ success: false, error: error.details });
+      res.status(400).json({ success: false, message: error.details });
       return;
     }
 

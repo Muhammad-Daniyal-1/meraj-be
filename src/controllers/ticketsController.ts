@@ -316,8 +316,7 @@ export const getTickets = async (req: Request, res: Response) => {
     console.error("Error fetching tickets:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch tickets",
-      error: error instanceof Error ? error.message : "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };
