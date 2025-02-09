@@ -1,23 +1,23 @@
 import { Router } from "express";
 import {
-  createPaymentMethodDropown,
-  deletePaymentMethodDropown,
-  getPaymentMethodDropowns,
-  getPaymentMethodDropownById,
-  updatePaymentMethodDropown,
-} from "../controllers/paymentMethodDropownController";
+  createPaymentMethodDropdown,
+  deletePaymentMethodDropdown,
+  getPaymentMethodDropdowns,
+  getPaymentMethodDropdownById,
+  updatePaymentMethodDropdown,
+} from "../controllers/paymentMethodDropdownController";
 import { authMiddleware } from "../middlewares/authMiddleware";
 
 const router = Router();
 
-router.get("/get-all", authMiddleware, getPaymentMethodDropowns);
+router.get("/get-all", authMiddleware, getPaymentMethodDropdowns);
 router.get(
   "/get-payment-method/:id",
   authMiddleware,
-  getPaymentMethodDropownById
+  getPaymentMethodDropdownById
 );
-router.post("/create", authMiddleware, createPaymentMethodDropown);
-router.delete("/delete/:id", authMiddleware, deletePaymentMethodDropown);
-router.patch("/update/:id", authMiddleware, updatePaymentMethodDropown);
+router.post("/create", authMiddleware, createPaymentMethodDropdown);
+router.delete("/delete/:id", authMiddleware, deletePaymentMethodDropdown);
+router.patch("/update/:id", authMiddleware, updatePaymentMethodDropdown);
 
 export default router;

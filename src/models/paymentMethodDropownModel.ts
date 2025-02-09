@@ -1,13 +1,13 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export interface PaymentMethodDropown extends Document {
+export interface PaymentMethodDropdown extends Document {
   user: string;
   name: string;
   type: string;
   paymentMethodType: string;
 }
 
-const paymentMethodDropownSchema: Schema = new Schema(
+const paymentMethodDropdownSchema: Schema = new Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -21,7 +21,7 @@ const paymentMethodDropownSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-export const PaymentMethodDropown = mongoose.model<PaymentMethodDropown>(
-  "PaymentMethodDropown",
-  paymentMethodDropownSchema
+export const PaymentMethodDropdown = mongoose.model<PaymentMethodDropdown>(
+  "PaymentMethodDropdown",
+  paymentMethodDropdownSchema
 );

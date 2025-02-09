@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
-import { PaymentMethodDropown } from "../models/paymentMethodDropownModel";
+import { PaymentMethodDropdown } from "../models/paymentMethodDropownModel";
 
-export const getPaymentMethodDropowns = async (req: Request, res: Response) => {
+export const getPaymentMethodDropdowns = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { page = 1, limit = 20, search = "" } = req.query;
 
@@ -20,14 +23,14 @@ export const getPaymentMethodDropowns = async (req: Request, res: Response) => {
       : {};
 
     // Fetching payment method dropown with pagination and search query
-    const paymentMethodDropdown = await PaymentMethodDropown.find(query)
+    const paymentMethodDropdown = await PaymentMethodDropdown.find(query)
       .sort({ createdAt: -1 })
       .skip((pageNumber - 1) * limitNumber)
       .limit(limitNumber);
 
     // Total count for pagination
     const totalPaymentMethodDropdown =
-      await PaymentMethodDropown.countDocuments(query);
+      await PaymentMethodDropdown.countDocuments(query);
 
     res.json({
       success: true,
@@ -48,14 +51,14 @@ export const getPaymentMethodDropowns = async (req: Request, res: Response) => {
   }
 };
 
-export const getPaymentMethodDropownById = async (
+export const getPaymentMethodDropdownById = async (
   req: Request,
   res: Response
 ) => {
   try {
     const { id } = req.params;
-    const paymentMethodDropown = await PaymentMethodDropown.findById(id);
-    res.json({ success: true, paymentMethodDropown });
+    const paymentMethodDropdown = await PaymentMethodDropdown.findById(id);
+    res.json({ success: true, paymentMethodDropdown });
   } catch (error) {
     console.error("Error fetching payment method dropown:", error);
     res.status(500).json({
@@ -65,14 +68,14 @@ export const getPaymentMethodDropownById = async (
   }
 };
 
-export const createPaymentMethodDropown = async (
+export const createPaymentMethodDropdown = async (
   req: Request,
   res: Response
 ) => {
   try {
     const user = (req as any).userId;
     const { name, type, methodFor } = req.body;
-    const paymentMethodDropown = await PaymentMethodDropown.create({
+    const paymentMethodDropown = await PaymentMethodDropdown.create({
       user,
       name,
       type,
@@ -92,13 +95,13 @@ export const createPaymentMethodDropown = async (
   }
 };
 
-export const updatePaymentMethodDropown = async (
+export const updatePaymentMethodDropdown = async (
   req: Request,
   res: Response
 ) => {
   try {
     const { id } = req.params;
-    const paymentMethodDropown = await PaymentMethodDropown.findByIdAndUpdate(
+    const paymentMethodDropown = await PaymentMethodDropdown.findByIdAndUpdate(
       id,
       { ...req.body },
       { new: true }
@@ -117,13 +120,13 @@ export const updatePaymentMethodDropown = async (
   }
 };
 
-export const deletePaymentMethodDropown = async (
+export const deletePaymentMethodDropdown = async (
   req: Request,
   res: Response
 ) => {
   try {
     const { id } = req.params;
-    const paymentMethodDropown = await PaymentMethodDropown.findByIdAndDelete(
+    const paymentMethodDropown = await PaymentMethodDropdown.findByIdAndDelete(
       id
     );
     res.json({
