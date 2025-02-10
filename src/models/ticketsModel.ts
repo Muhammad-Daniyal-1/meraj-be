@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface Ticket extends Document {
   user: mongoose.Types.ObjectId;
   airlineCode: string;
+  ticketNumberWithoutPrefix: string;
   ticketNumber: string;
   passengerName: string;
   provider: mongoose.Types.ObjectId;
@@ -41,9 +42,10 @@ const ticketSchema: Schema = new Schema(
       ref: "User",
       required: true,
     },
-    airlineCode: { type: String, required: true },
-    ticketNumber: { type: String, required: true },
-    passengerName: { type: String, required: true },
+    airlineCode: { type: String },
+    ticketNumberWithoutPrefix: { type: String },
+    ticketNumber: { type: String },
+    passengerName: { type: String },
     provider: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Providers",
@@ -54,21 +56,21 @@ const ticketSchema: Schema = new Schema(
       ref: "Agents",
     },
     operationType: { type: String, required: true },
-    issueDate: { type: Date, required: true },
-    departureDate: { type: Date, required: true },
-    returnDate: { type: Date, required: true },
-    departure: { type: String, required: true },
-    destination: { type: String, required: true },
-    pnr: { type: String, required: true },
-    providerCost: { type: Number, required: true },
-    consumerCost: { type: Number, required: true },
-    profit: { type: Number, required: true },
+    issueDate: { type: Date },
+    departureDate: { type: Date },
+    returnDate: { type: Date },
+    departure: { type: String },
+    destination: { type: String },
+    pnr: { type: String },
+    providerCost: { type: Number },
+    consumerCost: { type: Number },
+    profit: { type: Number },
     reference: { type: String },
-    clientPaymentMethod: { type: String, required: true },
-    paymentToProvider: { type: String, required: true },
-    segment: { type: String, required: true },
+    clientPaymentMethod: { type: String },
+    paymentToProvider: { type: String },
+    segment: { type: String },
     furtherDescription: { type: String },
-    paymentType: { type: String, required: true },
+    paymentType: { type: String },
     // Hotel/Umrah fields
     checkInDate: { type: Date },
     checkOutDate: { type: Date },

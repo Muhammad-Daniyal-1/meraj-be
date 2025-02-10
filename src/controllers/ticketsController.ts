@@ -156,6 +156,7 @@ export const getTickets = async (req: Request, res: Response) => {
       maxAmount,
       agent,
       provider,
+      airlineCode,
       query = "",
     } = req.query;
 
@@ -189,6 +190,11 @@ export const getTickets = async (req: Request, res: Response) => {
       matchConditions.provider = new mongoose.Types.ObjectId(
         provider as string
       );
+    }
+
+    // Ensure airlineCode is a valid string
+    if (airlineCode && typeof airlineCode === "string") {
+      matchConditions.airlineCode = airlineCode;
     }
 
     // Apply search query filter

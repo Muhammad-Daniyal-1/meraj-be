@@ -11,6 +11,7 @@ import providerRoutes from "./routes/providerRoutes";
 import ticketsRoutes from "./routes/ticketsRoutes";
 import ledgerRoutes from "./routes/ledgerRoutes";
 import paymentMethodDropdownRoutes from "./routes/paymentMethodDropdownRoutes";
+import dashboardRoutes from "./routes/dashboardRoutes";
 
 dotenv.config();
 
@@ -43,5 +44,6 @@ app.use("/api/v1/providers", providerRoutes);
 app.use("/api/v1/tickets", ticketsRoutes);
 app.use("/api/v1/ledgers", ledgerRoutes);
 app.use("/api/v1/payment-methods", paymentMethodDropdownRoutes);
+app.use("/api/v1/dashboard", dashboardRoutes);
 
 export default app;

@@ -56,28 +56,40 @@ export const createTicketSchema = Joi.object({
   }),
 
   // Flight fields (conditionally required)
-  ticketNumber: Joi.string().optional(),
-  airlineCode: Joi.string().optional(),
-  issueDate: Joi.date().iso().optional(),
-  departureDate: Joi.date().iso().optional(),
-  returnDate: Joi.date().iso().optional(),
-  departure: Joi.string().optional(),
-  destination: Joi.string().optional(),
-  pnr: Joi.string().optional(),
-  providerCost: Joi.number().min(0).optional().messages({
-    "number.base": "Provider Cost must be a number.",
-    "number.min": "Provider Cost must be a non-negative number.",
-  }),
-  consumerCost: Joi.number().min(0).optional().messages({
-    "number.base": "Consumer Cost must be a number.",
-    "number.min": "Consumer Cost must be a non-negative number.",
-  }),
-  profit: Joi.number().optional().messages({
-    "number.base": "Profit must be a number.",
-  }),
-  clientPaymentMethod: Joi.string().optional(),
-  paymentToProvider: Joi.string().optional(),
-  segment: Joi.string().optional(),
+  ticketNumber: Joi.string().optional().allow(""),
+  airlineCode: Joi.string().optional().allow(""),
+  ticketNumberWithoutPrefix: Joi.string().optional().allow(""),
+  issueDate: Joi.date().iso().optional().allow(""),
+  departureDate: Joi.date().iso().optional().allow(""),
+  returnDate: Joi.date().iso().optional().allow(""),
+  departure: Joi.string().optional().allow(""),
+  destination: Joi.string().optional().allow(""),
+  pnr: Joi.string().optional().allow(""),
+  providerCost: Joi.number()
+    .min(0)
+    .optional()
+    .messages({
+      "number.base": "Provider Cost must be a number.",
+      "number.min": "Provider Cost must be a non-negative number.",
+    })
+    .allow(""),
+  consumerCost: Joi.number()
+    .min(0)
+    .optional()
+    .messages({
+      "number.base": "Consumer Cost must be a number.",
+      "number.min": "Consumer Cost must be a non-negative number.",
+    })
+    .allow(""),
+  profit: Joi.number()
+    .optional()
+    .messages({
+      "number.base": "Profit must be a number.",
+    })
+    .allow(""),
+  clientPaymentMethod: Joi.string().optional().allow(""),
+  paymentToProvider: Joi.string().optional().allow(""),
+  segment: Joi.string().optional().allow(""),
 
   // Always optional fields
   reference: Joi.string().optional().allow(""),
