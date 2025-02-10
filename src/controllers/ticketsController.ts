@@ -1,8 +1,15 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
+import puppeteer from "puppeteer";
+import fs from "fs-extra";
+import path from "path";
+import handlebars from "handlebars";
+import { Base64Encode } from "base64-stream";
+import stream from "stream";
 import { Tickets } from "../models/ticketsModel";
 import { createTicketSchema } from "./schema";
 import { createTicketLedgerEntry } from "./ledgerController";
-import mongoose from "mongoose";
+import { formatDateToLocal } from "../utils/logger";
 
 // export const getTickets = async (req: Request, res: Response) => {
 //   try {
@@ -467,5 +474,67 @@ export const deleteTicket = async (req: Request, res: Response) => {
       success: false,
       error: error instanceof Error ? error.message : "Internal Server Error",
     });
+  }
+};
+
+export const generateReceiptPdf = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const ticket = await Tickets.findById(id);
+
+    if (!ticket) {
+      res.status(404).json({ success: false, message: "Ticket not found" });
+      return;
+    }
+
+    const templatePath = path.join(
+      __dirname,
+      "../templates/receiptTemplate.hbs"
+    );
+    const templateHtml = await fs.readFile(templatePath, "utf8");
+    const compiledTemplate = handlebars.compile(templateHtml);
+
+    const htmlContent = compiledTemplate({
+      pnr: ticket.pnr,
+      passengerName: ticket.passengerName,
+      ticketNumber: ticket.ticketNumber,
+      issueDate: formatDateToLocal(ticket.issueDate as any),
+      departureDate: formatDateToLocal(ticket.departureDate as any),
+      destination: ticket.destination,
+      price: ticket.consumerCost,
+    });
+
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent);
+    const pdfBuffer = await page.pdf({ format: "A5" });
+    await browser.close();
+    const bufferStream = new stream.PassThrough();
+    bufferStream.end(pdfBuffer);
+
+    const base64Stream = new Base64Encode();
+    let base64Data = "";
+
+    base64Stream.on("data", (chunk: any) => {
+      base64Data += chunk;
+    });
+
+    base64Stream.on("end", () => {
+      // Send the Base64 string as JSON
+      res.json({
+        pdf: base64Data,
+        filename: `${ticket.passengerName} ${ticket.ticketNumber}.pdf`,
+      });
+    });
+
+    // Pipe the PDF buffer stream into the Base64 encoder
+    bufferStream.pipe(base64Stream);
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+    res.status(500).send("Internal Server Error");
   }
 };

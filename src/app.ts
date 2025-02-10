@@ -4,6 +4,7 @@ import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import morgan from "morgan";
+import path from "path";
 import { ConnectToMongo } from "./config/db";
 import userRoutes from "./routes/userRoutes";
 import agentRoutes from "./routes/agentsRoutes";
@@ -29,6 +30,8 @@ app.use(morgan("dev"));
 
 app.use(cookieParser());
 app.use(bodyParser.json());
+
+app.use(express.static(path.join(__dirname, "./public")));
 
 ConnectToMongo();
 
