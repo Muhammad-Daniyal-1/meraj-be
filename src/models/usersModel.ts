@@ -6,6 +6,7 @@ export interface User extends Document {
   password: string;
   role: string;
   isActive: boolean;
+  permissions: string[];
 }
 
 const userSchema: Schema = new Schema(
@@ -19,7 +20,7 @@ const userSchema: Schema = new Schema(
       enum: ["Admin", "User"],
       default: "User",
     },
-    status: {
+    isActive: {
       type: Boolean,
       required: true,
       default: true,
