@@ -53,8 +53,21 @@ export const getUsers = async (req: Request, res: Response) => {
 
 export const getUserById = async (req: Request, res: Response) => {
   try {
+    let userId;
     const { id } = req.params;
-    const user = await User.findById(id).select("-password");
+    if (id === "me") {
+      userId = (req as any).userId;
+    } else {
+      userId = id;
+    }
+
+    const user = await User.findById({ _id: userId }).select("-password");
+
+    if (!user) {
+      res.status(404).json({ success: false, message: "User not found" });
+      return;
+    }
+
     res.json({ success: true, user });
   } catch (error) {
     console.error("Error fetching user:", error);
