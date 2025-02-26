@@ -65,22 +65,37 @@ export const createTicketSchema = Joi.object({
   departure: Joi.string().optional().allow(""),
   destination: Joi.string().optional().allow(""),
   pnr: Joi.string().optional().allow(""),
-  providerCost: Joi.number()
-    .min(0)
-    .optional()
-    .messages({
-      "number.base": "Provider Cost must be a number.",
-      "number.min": "Provider Cost must be a non-negative number.",
-    })
-    .allow(""),
-  consumerCost: Joi.number()
-    .min(0)
-    .optional()
-    .messages({
-      "number.base": "Consumer Cost must be a number.",
-      "number.min": "Consumer Cost must be a non-negative number.",
-    })
-    .allow(""),
+  providerCost: Joi.when("operationType", {
+    is: Joi.string().valid("Refund", "Re-Issue"),
+    then: Joi.number()
+      .messages({
+        "number.base": "Provider Cost must be a number.",
+      })
+      .allow(""), // allow negative for refund/re-issue
+    otherwise: Joi.number()
+      .min(0)
+      .messages({
+        "number.base": "Provider Cost must be a number.",
+        "number.min": "Provider Cost must be a non-negative number.",
+      })
+      .allow(""),
+  }),
+
+  consumerCost: Joi.when("operationType", {
+    is: Joi.string().valid("Refund", "Re-Issue"),
+    then: Joi.number()
+      .messages({
+        "number.base": "Consumer Cost must be a number.",
+      })
+      .allow(""),
+    otherwise: Joi.number()
+      .min(0)
+      .messages({
+        "number.base": "Consumer Cost must be a number.",
+        "number.min": "Consumer Cost must be a non-negative number.",
+      })
+      .allow(""),
+  }),
   profit: Joi.number()
     .optional()
     .messages({
@@ -102,7 +117,7 @@ export const createTicketSchema = Joi.object({
   // Hotel/Umrah fields
   checkInDate: Joi.date().iso().optional(),
   checkOutDate: Joi.date().iso().optional(),
-  hotelName: Joi.string().optional(),
+  hotelName: Joi.string().optional().allow(null, ""),
 
   // Re-Issue/Refund fields
   providerFee: Joi.number().min(0).optional(),
@@ -114,8 +129,45 @@ export const createTicketSchema = Joi.object({
   .custom((value, helpers) => {
     const { operationType } = value;
 
-    // For flight operations (all types except Hotel/Umrah)
-    if (!["Hotel", "Umrah"].includes(operationType)) {
+    // 1) If Re-Issue/Refund, only require fee fields
+    if (["Re-Issue", "Refund"].includes(operationType)) {
+      const requiredFeeFields = ["providerFee", "consumerFee"];
+      for (const field of requiredFeeFields) {
+        if (value[field] == null) {
+          return helpers.message(
+            `${field} is required for Re-Issue/Refund ops.` as any
+          );
+        }
+      }
+      return value; // STOP: do not fall through to hotel or flight checks
+    }
+
+    // 2) If Hotel/Umrah, require hotel fields
+    else if (["Hotel", "Umrah"].includes(operationType)) {
+      const requiredHotelFields = [
+        "checkInDate",
+        "checkOutDate",
+        "hotelName",
+        "providerCost",
+        "consumerCost",
+        "profit",
+      ];
+      for (const field of requiredHotelFields) {
+        if (
+          value[field] === undefined ||
+          value[field] === null ||
+          (typeof value[field] === "string" && value[field].trim() === "")
+        ) {
+          return helpers.message(
+            `${field} is required for Hotel/Umrah ops.` as any
+          );
+        }
+      }
+      return value; // STOP
+    }
+
+    // 3) Otherwise, treat as flight
+    else {
       const requiredFlightFields = [
         "airlineCode",
         "ticketNumber",
@@ -144,42 +196,6 @@ export const createTicketSchema = Joi.object({
           );
         }
       }
+      return value;
     }
-
-    // For Hotel/Umrah operations
-    if (["Hotel", "Umrah"].includes(operationType)) {
-      const requiredHotelFields = [
-        "checkInDate",
-        "checkOutDate",
-        "hotelName",
-        "providerCost",
-        "consumerCost",
-        "profit",
-      ];
-      for (const field of requiredHotelFields) {
-        if (
-          value[field] === undefined ||
-          value[field] === null ||
-          (typeof value[field] === "string" && value[field].trim() === "")
-        ) {
-          return helpers.message(
-            `${field} is required for Hotel/Umrah operations.` as any
-          );
-        }
-      }
-    }
-
-    // For Re-Issue/Refund operations
-    if (["Re-Issue", "Refund"].includes(operationType)) {
-      const requiredFeeFields = ["providerFee", "consumerFee"];
-      for (const field of requiredFeeFields) {
-        if (value[field] === undefined || value[field] === null) {
-          return helpers.message(
-            `${field} is required for Re-Issue/Refund operations.` as any
-          );
-        }
-      }
-    }
-
-    return value;
   });

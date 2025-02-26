@@ -8,8 +8,13 @@ import { Base64Encode } from "base64-stream";
 import stream from "stream";
 import { Tickets } from "../models/ticketsModel";
 import { createTicketSchema } from "./schema";
-import { createTicketLedgerEntry } from "./ledgerController";
+import {
+  createLedgerEntryWithType,
+  createTicketLedgerEntry,
+} from "./ledgerController";
 import { formatDateToLocal } from "../utils/logger";
+import { PaymentMethodDropdown } from "../models/paymentMethodDropownModel";
+import { handleLedgerDifference } from "../helpers/handleLedgerDifference";
 
 // export const getTickets = async (req: Request, res: Response) => {
 //   try {
@@ -356,9 +361,10 @@ export const getTicketById = async (req: Request, res: Response) => {
   }
 };
 
-export const createTicket = async (req: Request, res: Response) => {
+export const createTicketx = async (req: Request, res: Response) => {
   try {
     // Validate the request body using Joi
+    console.log(req.body);
     const { error, value } = createTicketSchema.validate(req.body, {
       abortEarly: false,
     });
@@ -373,8 +379,9 @@ export const createTicket = async (req: Request, res: Response) => {
 
     // If the ticket number is NOT an all-zeros value, check for duplicates.
     if (
-      normalizedTicketNumber !== "0000000000000" &&
-      normalizedTicketNumber !== "0000000000000000"
+      (normalizedTicketNumber !== "0000000000000" &&
+        normalizedTicketNumber !== "0000000000000000") ||
+      req.body.operationType !== "Refund"
     ) {
       const existingTicket = await Tickets.findOne({
         ticketNumber: normalizedTicketNumber,
@@ -382,7 +389,7 @@ export const createTicket = async (req: Request, res: Response) => {
       if (existingTicket) {
         res
           .status(400)
-          .json({ success: false, error: "Ticket already exists" });
+          .json({ success: false, message: "Ticket already exists" });
         return;
       }
     }
@@ -422,7 +429,106 @@ export const createTicket = async (req: Request, res: Response) => {
   }
 };
 
-export const updateTicket = async (req: Request, res: Response) => {
+export const createTicket = async (req: Request, res: Response) => {
+  try {
+    const { error, value } = createTicketSchema.validate(req.body, {
+      abortEarly: false,
+    });
+    if (error) {
+      res.status(400).json({ success: false, error: error.details });
+      return;
+    }
+
+    const normalizedTicketNumber = value.ticketNumber.trim();
+    value.ticketNumber = normalizedTicketNumber;
+
+    // If the ticket number is NOT an all-zeros value or refund, check for duplicates.
+    if (
+      normalizedTicketNumber !== "0000000000000" &&
+      normalizedTicketNumber !== "0000000000000000" &&
+      value.operationType !== "Refund"
+    ) {
+      const existingTicket = await Tickets.findOne({
+        ticketNumber: normalizedTicketNumber,
+      });
+      if (existingTicket) {
+        res
+          .status(400)
+          .json({ success: false, message: "Ticket already exists" });
+        return;
+      }
+    }
+
+    const user = (req as any).userId;
+
+    const newTicket = await Tickets.create({ ...value, user });
+    console.log("Created ticket:", newTicket._id);
+    const populatedTicket = await Tickets.findById(newTicket._id)
+      .populate("provider", "name")
+      .populate("agent", "name");
+
+    try {
+      // Get the payment method details to determine if it's an agent's card
+      let isAgentCard = false;
+      if (value.paymentToProvider) {
+        const paymentMethod = await PaymentMethodDropdown.findOne({
+          _id: value.paymentToProvider,
+          user,
+        });
+
+        console.log("Payment method found:", paymentMethod);
+        // Determine if payment is made using an agent's card
+        isAgentCard = paymentMethod?.type === "Agent Card";
+      }
+      console.log("Is agent card:", isAgentCard);
+
+      if (value.agent || (!value.agent && value.paymentType === "Partial")) {
+        // If payment is made with agent card, mark as no-effect, otherwise debit
+        const transactionType = isAgentCard ? "no-effect" : "debit";
+
+        await createLedgerEntryWithType(
+          value.agent || newTicket._id,
+          value.agent ? "Agents" : "Tickets",
+          newTicket._id as string,
+          value.consumerCost,
+          normalizedTicketNumber,
+          `${value.operationType} - Price - ${normalizedTicketNumber}`,
+          transactionType
+        );
+      }
+
+      // Additionally for Refund/Re-issue: Handle consumer fee ledger entry with simpler condition
+      if (
+        (value.operationType === "Refund" ||
+          value.operationType === "Re-Issue") &&
+        typeof value.consumerFee === "number"
+      ) {
+        // Fee entries always affect the ledger balance regardless of payment method
+        await createLedgerEntryWithType(
+          value.agent || newTicket._id,
+          value.agent ? "Agents" : "Tickets",
+          newTicket._id as string,
+          value.consumerFee,
+          normalizedTicketNumber,
+          `${value.operationType} - Fee - ${normalizedTicketNumber}`,
+          "debit"
+        );
+      }
+    } catch (ledgerError) {
+      console.error("Error creating ledger entries:", ledgerError);
+    }
+
+    res.json({ success: true, ticket: populatedTicket });
+  } catch (err) {
+    console.error("Error creating ticket:", err);
+    res.status(500).json({
+      success: false,
+      error: err instanceof Error ? err.message : "Internal Server Error",
+    });
+  }
+};
+
+export const updateTicketx = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -445,6 +551,106 @@ export const updateTicket = async (req: Request, res: Response) => {
       .populate("agent", "name");
 
     res.json({ success: true, ticket: populatedTicket });
+  } catch (error) {
+    console.error("Error updating ticket:", error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Internal Server Error",
+    });
+  }
+};
+
+export const updateTicket = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).userId;
+
+    // 1) Fetch the old ticket
+    const existingTicket = await Tickets.findById(id);
+    if (!existingTicket) {
+      res.status(404).json({ success: false, error: "Ticket not found" });
+      return;
+    }
+
+    // 2) Capture old consumer values
+    const oldConsumerCost = existingTicket.consumerCost || 0;
+    const oldConsumerFee = existingTicket.consumerFee || 0;
+
+    // 3) Extract new consumer values from req.body (fallback to old if undefined)
+    const newConsumerCost =
+      typeof req.body.consumerCost === "number"
+        ? req.body.consumerCost
+        : oldConsumerCost;
+
+    const newConsumerFee =
+      typeof req.body.consumerFee === "number"
+        ? req.body.consumerFee
+        : oldConsumerFee;
+
+    // 4) Calculate the differences
+    const consumerCostDiff = newConsumerCost - oldConsumerCost;
+    const consumerFeeDiff = newConsumerFee - oldConsumerFee;
+
+    // 5) Update the ticket document in DB
+    const updatedTicket = await Tickets.findByIdAndUpdate(
+      id,
+      { ...req.body, user },
+      { new: true }
+    )
+      .populate("provider", "name")
+      .populate("agent", "name");
+
+    console.log({ updatedTicket: updatedTicket });
+
+    if (updatedTicket) {
+      const referenceNumber = updatedTicket.ticketNumber;
+      const entityId = updatedTicket.agent
+        ? updatedTicket.agent._id
+        : updatedTicket._id;
+      const entityType = updatedTicket.agent ? "Agents" : "Tickets";
+      const ticketId = updatedTicket?._id as string;
+
+      // Check for agent card condition using the payment method from the request body
+      let isAgentCard = false;
+      if (req.body.paymentToProvider) {
+        const paymentMethod = await PaymentMethodDropdown.findOne({
+          _id: req.body.paymentToProvider,
+          user,
+        });
+        isAgentCard = paymentMethod?.type === "Agent Card";
+      }
+
+      console.log({
+        consumerCostDiff,
+        consumerFeeDiff,
+        isAgentCard,
+      });
+
+      if (consumerCostDiff !== 0) {
+        await handleLedgerDifference({
+          difference: consumerCostDiff,
+          entityId: entityId as string,
+          entityType,
+          ticketId,
+          referenceNumber,
+          descriptionPrefix: "Price",
+          isAgentCard,
+        });
+      }
+
+      if (consumerFeeDiff !== 0) {
+        await handleLedgerDifference({
+          difference: consumerFeeDiff,
+          entityId: entityId as string,
+          entityType,
+          ticketId,
+          referenceNumber,
+          descriptionPrefix: "Fee",
+        });
+      }
+    }
+
+    res.json({ success: true, ticket: updatedTicket });
   } catch (error) {
     console.error("Error updating ticket:", error);
     res.status(500).json({

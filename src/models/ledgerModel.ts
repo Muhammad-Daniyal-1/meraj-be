@@ -32,7 +32,7 @@ const ledgerSchema: Schema = new Schema(
     transactionType: {
       type: String,
       required: true,
-      enum: ["debit", "credit"],
+      enum: ["debit", "credit", "no-effect"],
     },
     amount: {
       type: Number,

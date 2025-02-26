@@ -66,8 +66,16 @@ const ticketSchema: Schema = new Schema(
     consumerCost: { type: Number },
     profit: { type: Number },
     reference: { type: String },
-    clientPaymentMethod: { type: String },
-    paymentToProvider: { type: String },
+    clientPaymentMethod: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PaymentMethodDropdown",
+      required: true,
+    },
+    paymentToProvider: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PaymentMethodDropdown",
+      required: true,
+    },
     segment: { type: String },
     furtherDescription: { type: String },
     paymentType: { type: String },

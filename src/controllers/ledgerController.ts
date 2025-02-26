@@ -44,6 +44,51 @@ export const createTicketLedgerEntry = async (
   }
 };
 
+export const createLedgerEntryWithType = async (
+  entityId: mongoose.Types.ObjectId | string,
+  entityType: "Agents" | "Tickets",
+  ticketId: mongoose.Types.ObjectId | string,
+  amount: number,
+  referenceNumber: string,
+  description: string,
+  transactionType: "debit" | "credit" | "no-effect" = "debit"
+) => {
+  try {
+    // Get the current balance
+    const lastEntry = await Ledger.findOne({ entityId }).sort({
+      createdAt: -1,
+    });
+
+    const currentBalance = lastEntry ? lastEntry.balance : 0;
+
+    // Only adjust balance for debit/credit transactions, not for no-effect
+    const newBalance =
+      transactionType === "no-effect"
+        ? currentBalance
+        : transactionType === "debit"
+        ? currentBalance + amount
+        : currentBalance - amount;
+
+    // Create new ledger entry
+    const ledgerEntry = new Ledger({
+      entityId: new mongoose.Types.ObjectId(entityId),
+      entityType,
+      ticketId: new mongoose.Types.ObjectId(ticketId),
+      transactionType,
+      amount,
+      balance: newBalance,
+      description,
+      referenceNumber,
+    });
+
+    await ledgerEntry.save();
+    return ledgerEntry;
+  } catch (error) {
+    console.error("Error creating ledger entry:", error);
+    throw error;
+  }
+};
+
 export const recordPayment = async (
   req: Request<{}, {}, PaymentRequestBody>,
   res: Response
