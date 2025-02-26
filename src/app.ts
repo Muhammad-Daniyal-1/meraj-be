@@ -21,8 +21,13 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:3000", // Frontend origin
     credentials: true, // Allow cookies
+    origin: [
+      "http://localhost:3000",
+      "https://accounts.merajtravels.it",
+      "https://merajtravels.it",
+    ], // Frontend origin
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   })
 );
 

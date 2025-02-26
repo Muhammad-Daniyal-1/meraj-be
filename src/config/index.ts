@@ -3,5 +3,5 @@ dotenv.config();
 
 export const config = {
   port: process.env.PORT || 5001,
-  dbUri: process.env.DATABASE_URI || "mongodb://localhost:27017/meraj-be",
+  dbUri: process.env.DATABASE_URI 
 };
